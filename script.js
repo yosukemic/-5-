@@ -31,6 +31,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const manualSaveBtn = document.getElementById('manual-save-btn');
     const openManualRecordBtn = document.getElementById('open-manual-record-btn');
 
+    // OCR Elements
+    const calcOcrBtn = document.getElementById('calc-ocr-btn');
+    const calcOcrFile = document.getElementById('calc-ocr-file');
+    const manualOcrBtn = document.getElementById('manual-ocr-btn');
+    const manualOcrFile = document.getElementById('manual-ocr-file');
+    const ocrLoadingOverlay = document.getElementById('ocr-loading-overlay');
+    const ocrProgressBar = document.getElementById('ocr-progress-bar');
+    const ocrProgressText = document.getElementById('ocr-progress-text');
+
     // Modal
     const memoModal = document.getElementById('memo-modal');
     const modalSummary = document.getElementById('modal-summary');
@@ -44,7 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const goalProgressContainer = document.getElementById('goal-progress-container');
     const goalText = document.getElementById('goal-text');
     const goalRemaining = document.getElementById('goal-remaining');
-    const goalProgressBar = document.getElementById('goal-progress-bar');
+    const flightTrail = document.getElementById('flight-trail');
+    const flightJet = document.getElementById('flight-jet');
+    const flightDestIcon = document.getElementById('flight-dest-icon');
+    const flightDestName = document.getElementById('flight-dest-name');
     
     // Settle Modal Elements
     const settleModal = document.getElementById('settle-modal');
@@ -378,38 +390,38 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     const shops = [
-        { id: 'normal', name: '指定なし（一般店舗）', category: 'normal', isOnline: false },
-        { id: 'seven', name: 'セブン-イレブン', category: 'smcc_mufg_target', isOnline: false },
-        { id: 'lawson', name: 'ローソン', category: 'smcc_mufg_target', isOnline: false },
-        { id: 'familymart', name: 'ファミリーマート', category: 'normal', isOnline: false },
-        { id: 'seicomart', name: 'セイコーマート', category: 'smcc_target', isOnline: false },
-        { id: 'mac', name: 'マクドナルド', category: 'smcc_target', isOnline: false },
-        { id: 'saizeriya', name: 'サイゼリヤ', category: 'smcc_target', isOnline: false },
-        { id: 'sukiya', name: 'すき家', category: 'smcc_target', isOnline: false },
-        { id: 'matsuya', name: '松屋', category: 'mufg_target', isOnline: false },
-        { id: 'matsunoya', name: '松のや', category: 'mufg_target', isOnline: false },
-        { id: 'yoshinoya', name: '吉野家', category: 'normal', isOnline: false },
-        { id: 'doutor', name: 'ドトールコーヒー', category: 'smcc_target', isOnline: false },
-        { id: 'starbucks', name: 'スターバックス', category: 'jal_tokuyaku', isOnline: false },
-        { id: 'matsukiyo', name: 'マツモトキヨシ', category: 'jal_tokuyaku', isOnline: false },
-        { id: 'welcia', name: 'ウエルシア', category: 'normal', isOnline: false },
-        { id: 'aeon', name: 'イオン', category: 'aeon_target', isOnline: false },
-        { id: 'daiei', name: 'ダイエー', category: 'aeon_target', isOnline: false },
-        { id: 'maxvalu', name: 'マックスバリュ', category: 'aeon_target', isOnline: false },
-        { id: 'amazon', name: 'Amazon', category: 'amazon', isOnline: true },
-        { id: 'rakuten_ichiba', name: '楽天市場', category: 'rakuten', isOnline: true },
-        { id: 'yahoo_shop', name: 'Yahoo!ショッピング', category: 'yahoo', isOnline: true },
-        { id: 'gusto', name: 'ガスト', category: 'smcc_target', isOnline: false },
-        { id: 'cocos', name: 'ココス', category: 'smcc_target', isOnline: false },
-        { id: 'hama_sushi', name: 'はま寿司', category: 'smcc_target', isOnline: false },
-        { id: 'kappa_sushi', name: 'かっぱ寿司', category: 'smcc_target', isOnline: false },
-        { id: 'sushiro', name: 'スシロー', category: 'smcc_mufg_target', isOnline: false },
-        { id: 'kura_sushi', name: 'くら寿司', category: 'normal', isOnline: false },
-        { id: 'mos_burger', name: 'モスバーガー', category: 'smcc_target', isOnline: false },
-        { id: 'pizzahut', name: 'ピザハット', category: 'mufg_target', isOnline: false },
-        { id: 'suica_charge', name: 'モバイルSuicaチャージ', category: 'normal', isOnline: false },
-        { id: 'starbucks_charge', name: 'スターバックスカードチャージ', category: 'normal', isOnline: true },
-        { id: 'kyash_charge', name: 'Kyashチャージ', category: 'normal', isOnline: true }
+        { id: 'normal', name: '指定なし（一般店舗）', category: 'normal', storeCategory: 'その他', isOnline: false },
+        { id: 'seven', name: 'セブン-イレブン', category: 'smcc_mufg_target', storeCategory: '食費', isOnline: false },
+        { id: 'lawson', name: 'ローソン', category: 'smcc_mufg_target', storeCategory: '食費', isOnline: false },
+        { id: 'familymart', name: 'ファミリーマート', category: 'normal', storeCategory: '食費', isOnline: false },
+        { id: 'seicomart', name: 'セイコーマート', category: 'smcc_target', storeCategory: '食費', isOnline: false },
+        { id: 'mac', name: 'マクドナルド', category: 'smcc_target', storeCategory: '食費', isOnline: false },
+        { id: 'saizeriya', name: 'サイゼリヤ', category: 'smcc_target', storeCategory: '食費', isOnline: false },
+        { id: 'sukiya', name: 'すき家', category: 'smcc_target', storeCategory: '食費', isOnline: false },
+        { id: 'matsuya', name: '松屋', category: 'mufg_target', storeCategory: '食費', isOnline: false },
+        { id: 'matsunoya', name: '松のや', category: 'mufg_target', storeCategory: '食費', isOnline: false },
+        { id: 'yoshinoya', name: '吉野家', category: 'normal', storeCategory: '食費', isOnline: false },
+        { id: 'doutor', name: 'ドトールコーヒー', category: 'smcc_target', storeCategory: '食費', isOnline: false },
+        { id: 'starbucks', name: 'スターバックス', category: 'jal_tokuyaku', storeCategory: '食費', isOnline: false },
+        { id: 'matsukiyo', name: 'マツモトキヨシ', category: 'jal_tokuyaku', storeCategory: '日用品', isOnline: false },
+        { id: 'welcia', name: 'ウエルシア', category: 'normal', storeCategory: '日用品', isOnline: false },
+        { id: 'aeon', name: 'イオン', category: 'aeon_target', storeCategory: '食費', isOnline: false },
+        { id: 'daiei', name: 'ダイエー', category: 'aeon_target', storeCategory: '食費', isOnline: false },
+        { id: 'maxvalu', name: 'マックスバリュ', category: 'aeon_target', storeCategory: '食費', isOnline: false },
+        { id: 'amazon', name: 'Amazon', category: 'amazon', storeCategory: '趣味・娯楽', isOnline: true },
+        { id: 'rakuten_ichiba', name: '楽天市場', category: 'rakuten', storeCategory: '趣味・娯楽', isOnline: true },
+        { id: 'yahoo_shop', name: 'Yahoo!ショッピング', category: 'yahoo', storeCategory: '趣味・娯楽', isOnline: true },
+        { id: 'gusto', name: 'ガスト', category: 'smcc_target', storeCategory: '食費', isOnline: false },
+        { id: 'cocos', name: 'ココス', category: 'smcc_target', storeCategory: '食費', isOnline: false },
+        { id: 'hama_sushi', name: 'はま寿司', category: 'smcc_target', storeCategory: '食費', isOnline: false },
+        { id: 'kappa_sushi', name: 'かっぱ寿司', category: 'smcc_target', storeCategory: '食費', isOnline: false },
+        { id: 'sushiro', name: 'スシロー', category: 'smcc_mufg_target', storeCategory: '食費', isOnline: false },
+        { id: 'kura_sushi', name: 'くら寿司', category: 'normal', storeCategory: '食費', isOnline: false },
+        { id: 'mos_burger', name: 'モスバーガー', category: 'smcc_target', storeCategory: '食費', isOnline: false },
+        { id: 'pizzahut', name: 'ピザハット', category: 'mufg_target', storeCategory: '食費', isOnline: false },
+        { id: 'suica_charge', name: 'モバイルSuicaチャージ', category: 'normal', storeCategory: '交通費', isOnline: false },
+        { id: 'starbucks_charge', name: 'スターバックスカードチャージ', category: 'normal', storeCategory: '食費', isOnline: true },
+        { id: 'kyash_charge', name: 'Kyashチャージ', category: 'normal', storeCategory: 'その他', isOnline: true }
     ];
 
     function getScheduledPaymentDate(recordDateStr, closingDay, paymentDay, paymentMonthOffset) {
@@ -526,11 +538,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 ownedCards.push({ id, balance, customRate, eposShops, closingDay, paymentDay, paymentMonthOffset: 1 });
             });
             localStorage.setItem('sim_owned_cards', JSON.stringify(ownedCards));
+            updateFixedCardSelect();
             switchView('view-simulator');
         });
     }
 
+    function updateFixedCardSelect() {
+        if (!fixedCard) return;
+        fixedCard.innerHTML = '';
+
+        // デフォルトの現金
+        const optCash = document.createElement('option');
+        optCash.value = 'cash';
+        optCash.textContent = '💰 現金・電子マネー支払い';
+        fixedCard.appendChild(optCash);
+
+        // 所持カードを option として追加
+        ownedCards.forEach(oc => {
+            const preset = baseCardPresets.find(p => p.id === oc.id);
+            if (preset && preset.id !== 'cash') {
+                const opt = document.createElement('option');
+                opt.value = oc.id;
+                opt.textContent = `💳 ${preset.name}`;
+                fixedCard.appendChild(opt);
+            }
+        });
+    }
+
     function initSetup() {
+        // 1-31日および月末の請求日セレクトボックス生成
+        const fixedDaySelect = document.getElementById('fixed-day');
+        if (fixedDaySelect) {
+            fixedDaySelect.innerHTML = '';
+            for (let d = 1; d <= 31; d++) {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = `毎月${d}日請求`;
+                fixedDaySelect.appendChild(opt);
+            }
+            const optEnd = document.createElement('option');
+            optEnd.value = '月末';
+            optEnd.textContent = '毎月月末請求';
+            fixedDaySelect.appendChild(optEnd);
+        }
+
+        // サブスク支払手段のセレクトボックス更新
+        updateFixedCardSelect();
+
         cardChecklist.innerHTML = '';
         
         // Group cards
@@ -736,11 +790,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const cardName = cardPreset ? cardPreset.name : '不明なカード';
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid rgba(0,0,0,0.02)';
+            const dayDisplay = exp.day === '月末' ? '毎月月末' : `毎月${exp.day}日`;
             tr.innerHTML = `
                 <td style="padding:0.6rem 0.5rem; font-weight:600;">${exp.name}</td>
                 <td style="padding:0.6rem 0.5rem; color:var(--accent-primary); font-weight:bold;">¥${exp.amount.toLocaleString()}</td>
                 <td style="padding:0.6rem 0.5rem; color:var(--text-muted);">${cardName}</td>
-                <td style="padding:0.6rem 0.5rem;">毎月${exp.day}日</td>
+                <td style="padding:0.6rem 0.5rem;">${dayDisplay}</td>
                 <td style="padding:0.6rem 0.5rem;">
                     <button class="record-btn" onclick="window.deleteFixedExpense(${exp.id})" style="padding:0.2rem 0.4rem; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.05); margin:0; width:auto;">削除</button>
                 </td>
@@ -766,7 +821,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = fixedName.value.trim();
             const amount = parseInt(fixedAmount.value) || 0;
             const cardId = fixedCard.value;
-            const day = parseInt(fixedDay.value) || 10;
+            const rawDay = fixedDay.value;
+            const day = rawDay === '月末' ? '月末' : (parseInt(rawDay) || 10);
 
             if (!name || amount <= 0 || !cardId) return;
 
@@ -845,14 +901,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function initSimulator() {
         const shopSearch = document.getElementById('shop-search');
         const shopSuggestions = document.getElementById('shop-suggestions');
+        const shopCategory = document.getElementById('shop-category');
         
         if(!shopSearch || !shopSuggestions) return;
 
         function showSuggestions(query) {
             shopSuggestions.innerHTML = '';
             
+            const selectedCat = shopCategory ? shopCategory.value : 'all';
+            
             // 検索候補を絞り込み。空の場合は全件（ノーマルを除く）表示。
-            let filtered = shops.filter(s => s.id !== 'normal' && s.name.toLowerCase().includes(query.toLowerCase()));
+            let filtered = shops.filter(s => {
+                const matchesCategory = (selectedCat === 'all' || s.storeCategory === selectedCat);
+                return s.id !== 'normal' && matchesCategory && s.name.toLowerCase().includes(query.toLowerCase());
+            });
             
             if (filtered.length === 0) {
                 shopSuggestions.innerHTML = '<div class="suggestion-item" style="color:#94a3b8; cursor:default;">候補がありません</div>';
@@ -863,11 +925,29 @@ document.addEventListener('DOMContentLoaded', () => {
             filtered.forEach(shop => {
                 const div = document.createElement('div');
                 div.className = 'suggestion-item';
-                div.textContent = shop.name;
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                
+                // カテゴリーバッジを店の前に表示して分ける
+                const badge = document.createElement('span');
+                badge.className = 'suggestion-cat-badge';
+                badge.textContent = shop.storeCategory || 'その他';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = shop.name;
+                
+                div.appendChild(badge);
+                div.appendChild(nameSpan);
+                
                 div.addEventListener('click', () => {
                     shopSearch.value = shop.name;
                     selectedShop = shop;
                     shopSuggestions.classList.add('hidden');
+                    
+                    // カテゴリーセレクトもその店舗のものに自動で合わせる
+                    if (shopCategory && shop.storeCategory) {
+                        shopCategory.value = shop.storeCategory;
+                    }
                 });
                 shopSuggestions.appendChild(div);
             });
@@ -882,6 +962,13 @@ document.addEventListener('DOMContentLoaded', () => {
         shopSearch.addEventListener('focus', (e) => {
             showSuggestions(e.target.value);
         });
+
+        if (shopCategory) {
+            shopCategory.addEventListener('change', () => {
+                selectedShop = null;
+                showSuggestions(shopSearch.value);
+            });
+        }
 
         // 外側クリックでサジェストを閉じる
         document.addEventListener('click', (e) => {
@@ -1088,6 +1175,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         modalSummary.textContent = summaryText;
         memoInput.value = '';
+
+        // 店に対応したカテゴリーの自動選択
+        const matchedShop = shops.find(s => s.name === pendingRecord.shopName);
+        const recordCategorySelect = document.getElementById('record-category');
+        if (recordCategorySelect) {
+            if (matchedShop && matchedShop.storeCategory) {
+                recordCategorySelect.value = matchedShop.storeCategory;
+            } else {
+                recordCategorySelect.value = 'その他';
+            }
+        }
+
         memoModal.classList.remove('hidden');
     };
 
@@ -1323,7 +1422,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // クレジットカード決済で固定費を支払う場合
             if (preset.group !== '電子マネー・現金' && preset.id !== 'cash') {
                 // 当月の固定費発生日を想定
-                const expDateStr = `${currentYear}/${String(currentMonth).padStart(2, '0')}/${String(exp.day).padStart(2, '0')}`;
+                let targetDay = exp.day;
+                if (targetDay === '月末') {
+                    targetDay = new Date(currentYear, currentMonth, 0).getDate();
+                }
+                const expDateStr = `${currentYear}/${String(currentMonth).padStart(2, '0')}/${String(targetDay).padStart(2, '0')}`;
                 
                 // カードの締め日設定の取得
                 const oc = ownedCards.find(c => c.id === preset.id);
@@ -1552,15 +1655,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 goalText.textContent = `${airlineName}で${destName}へ (${Math.floor(currentMiles).toLocaleString()} / ${requiredMiles.toLocaleString()})`;
                 
+                // 目的地アイコンと名前の更新
+                const destMappings = {
+                    okinawa: { icon: '🌺', name: '沖縄' },
+                    seoul: { icon: '🇰🇷', name: 'ソウル' },
+                    hawaii: { icon: '🌴', name: 'ハワイ' },
+                    ny: { icon: '🗽', name: 'NY' },
+                    paris: { icon: '🏰', name: 'パリ' }
+                };
+                const mapping = destMappings[dest] || { icon: '📍', name: '目的地' };
+                if (flightDestIcon) flightDestIcon.textContent = mapping.icon;
+                if (flightDestName) flightDestName.textContent = mapping.name;
+
+                const percent = Math.min((currentMiles / requiredMiles) * 100, 100);
+                if (flightTrail) flightTrail.style.width = `${percent}%`;
+                if (flightJet) flightJet.style.left = `calc(1.6rem + (100% - 3.2rem) * ${percent / 100})`;
+
                 if (currentMiles >= requiredMiles) {
                     goalRemaining.textContent = '🎉 目標達成！';
                     goalRemaining.style.color = '#34d399';
-                    goalProgressBar.style.width = '100%';
-                    goalProgressBar.style.background = 'linear-gradient(90deg, #10b981, #34d399)';
                 } else {
                     const diff = requiredMiles - currentMiles;
-                    goalProgressBar.style.width = `${Math.min((currentMiles / requiredMiles) * 100, 100)}%`;
-                    goalProgressBar.style.background = 'linear-gradient(90deg, #4f46e5, #0284c7)';
+                    goalRemaining.textContent = `あと ${Math.ceil(diff).toLocaleString()} マイル`;
+                    goalRemaining.style.color = 'var(--accent-primary)';
                     
                     // --- 旅先マイル到達予測シミュレーター ---
                     // 履歴の全期間から月平均マイルを算出
@@ -1662,6 +1779,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Calculate monthly total
         let monthlyTotal = displayHistory.reduce((sum, r) => sum + r.amount, 0);
         totalExpenseEl.textContent = `¥${monthlyTotal.toLocaleString()}`;
+
+        const expenseMonthLabel = document.getElementById('expense-month-label');
+        if (expenseMonthLabel) {
+            expenseMonthLabel.textContent = `${year}年${currentCalDate.getMonth() + 1}月の支出`;
+        }
 
         // Filter by selected date if any
         if (selectedDateStr) {
@@ -2091,6 +2213,793 @@ document.addEventListener('DOMContentLoaded', () => {
             input.addEventListener('input', renderExchangeRoutes);
         }
     });
+
+    // --- OCR (Tesseract.js) Implementation ---
+
+    // カメラ関連の要素
+    const ocrCameraModal = document.getElementById('ocr-camera-modal');
+    const ocrCameraPreview = document.getElementById('ocr-camera-preview');
+    const cameraCloseBtn = document.getElementById('camera-close-btn');
+    const cameraShutterBtn = document.getElementById('camera-shutter-btn');
+    const cameraToggleBtn = document.getElementById('camera-toggle-btn');
+    const ocrCameraCanvas = document.getElementById('ocr-camera-canvas');
+    const ocrCameraFlash = document.getElementById('ocr-camera-flash');
+    
+    const calcCameraBtn = document.getElementById('calc-camera-btn');
+    const manualCameraBtn = document.getElementById('manual-camera-btn');
+
+    let cameraStream = null;
+    let currentFacingMode = 'environment'; // デフォルトは背面カメラ
+    let activeOcrCallback = null; // カメラ撮影完了時に呼び出すコールバック
+
+    // カメラを起動する
+    function startCamera(callback) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("ブラウザがカメラの使用をサポートしていません。");
+            return;
+        }
+        
+        activeOcrCallback = callback;
+        ocrCameraModal.classList.remove('hidden');
+        
+        const constraints = {
+            video: {
+                facingMode: currentFacingMode,
+                width: { ideal: 1280 },
+                height: { ideal: 960 }
+            },
+            audio: false
+        };
+        
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => {
+                cameraStream = stream;
+                ocrCameraPreview.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Camera access error:", err);
+                alert("カメラの起動に失敗しました。カメラ権限を確認してください。");
+                ocrCameraModal.classList.add('hidden');
+            });
+    }
+
+    // カメラを停止する
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        ocrCameraPreview.srcObject = null;
+        ocrCameraModal.classList.add('hidden');
+        activeOcrCallback = null;
+    }
+
+    // カメラを切り替える
+    function toggleCamera() {
+        if (!cameraStream) return;
+        
+        currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+        
+        cameraStream.getTracks().forEach(track => track.stop());
+        
+        const constraints = {
+            video: {
+                facingMode: currentFacingMode,
+                width: { ideal: 1280 },
+                height: { ideal: 960 }
+            },
+            audio: false
+        };
+        
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => {
+                cameraStream = stream;
+                ocrCameraPreview.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Failed to switch camera:", err);
+                currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+                alert("カメラの切り替えに失敗しました。");
+            });
+    }
+
+    // シャッターを切って撮影する
+    function takePicture() {
+        if (!cameraStream || !activeOcrCallback) return;
+        
+        const width = ocrCameraPreview.videoWidth;
+        const height = ocrCameraPreview.videoHeight;
+        
+        if (width === 0 || height === 0) return;
+        
+        if (ocrCameraFlash) {
+            ocrCameraFlash.classList.remove('ocr-flash-active');
+            void ocrCameraFlash.offsetWidth; // reflow
+            ocrCameraFlash.classList.add('ocr-flash-active');
+        }
+        
+        ocrCameraCanvas.width = width;
+        ocrCameraCanvas.height = height;
+        const ctx = ocrCameraCanvas.getContext('2d');
+        
+        if (currentFacingMode === 'user') {
+            ctx.translate(width, 0);
+            ctx.scale(-1, 1);
+        }
+        
+        ctx.drawImage(ocrCameraPreview, 0, 0, width, height);
+        
+        ocrCameraCanvas.toBlob(blob => {
+            stopCamera();
+            if (blob) {
+                runOcrForFile(blob, activeOcrCallback);
+            }
+        }, 'image/jpeg', 0.9);
+    }
+
+    // カメラモーダルのボタンイベント登録
+    if (cameraCloseBtn) {
+        cameraCloseBtn.addEventListener('click', stopCamera);
+    }
+    if (cameraShutterBtn) {
+        cameraShutterBtn.addEventListener('click', takePicture);
+    }
+    if (cameraToggleBtn) {
+        cameraToggleBtn.addEventListener('click', toggleCamera);
+    }
+
+    // 計算フォームのカメラボタンイベント
+    if (calcCameraBtn) {
+        calcCameraBtn.addEventListener('click', () => {
+            startCamera((res) => {
+                if (res.amount) {
+                    amountInput.value = res.amount;
+                    highlightInputElement(amountInput);
+                }
+                if (res.shopName) {
+                    const shopSearch = document.getElementById('shop-search');
+                    if (shopSearch) {
+                        shopSearch.value = res.shopName;
+                        highlightInputElement(shopSearch);
+                        shopSearch.dispatchEvent(new Event('input'));
+                    }
+                }
+            });
+        });
+    }
+
+    // 直接入力モーダルのカメラボタンイベント
+    if (manualCameraBtn) {
+        manualCameraBtn.addEventListener('click', () => {
+            startCamera((res) => {
+                if (res.amount) {
+                    manualAmount.value = res.amount;
+                    highlightInputElement(manualAmount);
+                }
+                if (res.shopName) {
+                    manualMemo.value = res.shopName;
+                    highlightInputElement(manualMemo);
+                }
+                if (res.date) {
+                    manualDate.value = res.date;
+                    highlightInputElement(manualDate);
+                }
+            });
+        });
+    }
+
+    // 入力欄に一瞬ハイライトをあてる
+    function highlightInputElement(element) {
+        if (!element) return;
+        element.classList.remove('highlight-input');
+        void element.offsetWidth; // リフローを発生させてアニメーションを再起動
+        element.classList.add('highlight-input');
+        setTimeout(() => {
+            element.classList.remove('highlight-input');
+        }, 1800);
+    }
+
+    // OCRの実行
+    function runOcrForFile(file, callback) {
+        if (!file) return;
+
+        // Tesseract.js が正しく読み込まれているかチェック
+        if (typeof Tesseract === 'undefined') {
+            alert("OCRエンジン (Tesseract.js) が読み込まれていません。ネットワーク状況を確認してください。");
+            return;
+        }
+
+        ocrLoadingOverlay.classList.remove('hidden');
+        ocrProgressBar.style.width = '0%';
+        ocrProgressText.textContent = '初期化中...';
+
+        Tesseract.recognize(
+            file,
+            'jpn+eng',
+            {
+                logger: m => {
+                    if (m.status === 'recognizing') {
+                        const progress = Math.round(m.progress * 100);
+                        ocrProgressBar.style.width = `${progress}%`;
+                        ocrProgressText.textContent = `文字認識中... ${progress}%`;
+                    } else if (m.status === 'loading tesseract api') {
+                        ocrProgressText.textContent = 'OCRエンジンを読み込み中...';
+                    } else if (m.status === 'loading language traineddata') {
+                        ocrProgressText.textContent = '言語データをダウンロード中...';
+                    } else if (m.status === 'initializing api') {
+                        ocrProgressText.textContent = '文字の解析を準備中...';
+                    }
+                }
+            }
+        ).then(({ data: { text } }) => {
+            console.log("OCR Raw Text:", text);
+            const parsed = parseOcrText(text);
+            ocrLoadingOverlay.classList.add('hidden');
+            callback(parsed);
+        }).catch(err => {
+            console.error("OCR Error:", err);
+            ocrProgressText.textContent = 'エラーが発生しました';
+            setTimeout(() => {
+                ocrLoadingOverlay.classList.add('hidden');
+            }, 1500);
+            alert("画像の解析に失敗しました。画像が鮮明で十分な明るさがあるか確認してください。");
+        });
+    }
+
+    // OCR結果のテキスト解析
+    function parseOcrText(text) {
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        
+        let amount = null;
+        let shopName = '';
+        let date = null;
+
+        // 1. 金額の抽出
+        const amountRegexes = [
+            /(?:合計|支払額|請求額|総額|合計金額|税込合計|お支払|お預り|小計|買上額|現計|領収金額|売上|金額)[\s:：]*[¥￥]?\s*([0-9,]{3,8})/i,
+            /[¥￥]\s*([0-9,]{3,8})/i,
+            /([0-9,]{3,8})\s*円/i
+        ];
+
+        for (const regex of amountRegexes) {
+            for (const line of lines) {
+                const match = line.match(regex);
+                if (match && match[1]) {
+                    const cleanedVal = match[1].replace(/,/g, '');
+                    const val = parseInt(cleanedVal, 10);
+                    if (!isNaN(val) && val >= 10 && val <= 1000000) {
+                        amount = val;
+                        break;
+                    }
+                }
+            }
+            if (amount !== null) break;
+        }
+
+        // 補助ロジック: 金額が見つからない場合、100円以上100万円以下の最大の数値を合計額と仮定
+        if (amount === null) {
+            let maxVal = 0;
+            for (const line of lines) {
+                const numbers = line.replace(/,/g, '').match(/\d+/g) || [];
+                for (const numStr of numbers) {
+                    const val = parseInt(numStr, 10);
+                    if (val >= 100 && val <= 1000000 && val > maxVal) {
+                        maxVal = val;
+                    }
+                }
+            }
+            if (maxVal > 0) {
+                amount = maxVal;
+            }
+        }
+
+        // 2. 店舗名の抽出 (既知の店舗リスト)
+        const knownShops = [
+            'セブン-イレブン', 'セブンイレブン', 'セブン',
+            'ローソン', 'LAWSON',
+            'ファミリーマート', 'ファミマ', 'FamilyMart',
+            'ミニストップ', 'デイリーヤマザキ',
+            'マクドナルド', 'マック', 'McDonald',
+            'スターバックス', 'スタバ', 'Starbucks',
+            'ユニクロ', 'UNIQLO',
+            'ジーユー', 'GU',
+            'イオン', 'AEON',
+            '無印良品', '無印',
+            'スギ薬局', 'スギ',
+            'ウエルシア', 'welcia',
+            'マツモトキヨシ', 'マツキヨ',
+            'ココカラファイン', 'サンドラッグ',
+            '吉野家', 'すき家', '松屋',
+            'サイゼリヤ', 'サイゼ',
+            'ドトール', 'ガスト', 'コメダ珈琲',
+            'Amazon', 'アマゾン', '楽天', 'Rakuten', 'メルカリ'
+        ];
+
+        for (const shop of knownShops) {
+            const regex = new RegExp(shop, 'i');
+            if (regex.test(text)) {
+                shopName = shop;
+                break;
+            }
+        }
+
+        // 店舗名が見つからなければ最初の数行から適当な名前を引っ張る
+        if (!shopName && lines.length > 0) {
+            const dateRegex = /\d{4}[-/年]\d{1,2}[-/月]\d{1,2}/;
+            const phoneRegex = /\d{2,4}-\d{2,4}-\d{3,4}/;
+            const numberOnlyRegex = /^\d+$/;
+            
+            for (let i = 0; i < Math.min(3, lines.length); i++) {
+                const line = lines[i];
+                if (!dateRegex.test(line) && !phoneRegex.test(line) && !numberOnlyRegex.test(line) && line.length >= 2 && line.length <= 15) {
+                    shopName = line;
+                    break;
+                }
+            }
+        }
+
+        // 3. 日付の抽出
+        const dateRegexes = [
+            /(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/i,
+            /(\d{2})[-/](\d{1,2})[-/](\d{1,2})/i,
+            /(\d{1,2})[-/月](\d{1,2})[日]?/i
+        ];
+
+        const today = new Date();
+        let year = today.getFullYear();
+        let month = today.getMonth() + 1;
+        let day = today.getDate();
+        let foundDate = false;
+
+        for (const regex of dateRegexes) {
+            for (const line of lines) {
+                const match = line.match(regex);
+                if (match) {
+                    if (match.length === 4) {
+                        let y = parseInt(match[1], 10);
+                        if (y < 100) y += (y < 50 ? 2000 : 1900);
+                        year = y;
+                        month = parseInt(match[2], 10);
+                        day = parseInt(match[3], 10);
+                        foundDate = true;
+                    } else if (match.length === 3) {
+                        month = parseInt(match[1], 10);
+                        day = parseInt(match[2], 10);
+                        foundDate = true;
+                    }
+                    if (foundDate) break;
+                }
+            }
+            if (foundDate) break;
+        }
+
+        if (foundDate && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        } else {
+            date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+
+        return { amount, shopName, date };
+    }
+
+    // 最適解計算フォームのOCRボタンイベント
+    if (calcOcrBtn && calcOcrFile) {
+        calcOcrBtn.addEventListener('click', () => calcOcrFile.click());
+        calcOcrFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                runOcrForFile(file, (res) => {
+                    if (res.amount) {
+                        amountInput.value = res.amount;
+                        highlightInputElement(amountInput);
+                    }
+                    if (res.shopName) {
+                        const shopSearch = document.getElementById('shop-search');
+                        if (shopSearch) {
+                            shopSearch.value = res.shopName;
+                            highlightInputElement(shopSearch);
+                            shopSearch.dispatchEvent(new Event('input'));
+                        }
+                    }
+                    // ファイルインプットをリセット
+                    calcOcrFile.value = '';
+                });
+            }
+        });
+    }
+
+    // 支出直接入力モーダルのOCRボタンイベント
+    if (manualOcrBtn && manualOcrFile) {
+        manualOcrBtn.addEventListener('click', () => manualOcrFile.click());
+        manualOcrFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                runOcrForFile(file, (res) => {
+                    if (res.amount) {
+                        manualAmount.value = res.amount;
+                        highlightInputElement(manualAmount);
+                    }
+                    if (res.shopName) {
+                        manualMemo.value = res.shopName;
+                        highlightInputElement(manualMemo);
+                    }
+                    if (res.date) {
+                        manualDate.value = res.date;
+                        highlightInputElement(manualDate);
+                    }
+                    // ファイルインプットをリセット
+                    manualOcrFile.value = '';
+                });
+            }
+        });
+    }
+
+    // --- AI財務＆ポイ活アドバイザー機能 ---
+    const aiAnalyzeBtn = document.getElementById('ai-analyze-btn');
+    const aiLoadingContainer = document.getElementById('ai-loading-container');
+    const aiResultsContainer = document.getElementById('ai-results-container');
+    const aiPlaceholderMsg = document.getElementById('ai-placeholder-msg');
+    const aiLoadingText = document.getElementById('ai-loading-text');
+
+    if (aiAnalyzeBtn) {
+        aiAnalyzeBtn.addEventListener('click', () => {
+            // 初期状態にリセット
+            if (aiPlaceholderMsg) aiPlaceholderMsg.classList.add('hidden');
+            aiResultsContainer.innerHTML = '';
+            aiLoadingContainer.classList.remove('hidden');
+            aiAnalyzeBtn.disabled = true;
+            aiAnalyzeBtn.style.opacity = '0.6';
+            aiAnalyzeBtn.innerHTML = '<span>🤖</span> 分析中...';
+
+            // ローディングテキストのアニメーション
+            const steps = [
+                { text: "お小遣い帳データをスキャン中... (15%)", delay: 0 },
+                { text: "クレジットカード引き落とし予定を検証中... (45%)", delay: 600 },
+                { text: "固定費の決済手段とポイント還元率を分析中... (70%)", delay: 1200 },
+                { text: "マイル目標のフライトロードマップを計算中... (90%)", delay: 1800 }
+            ];
+
+            steps.forEach(step => {
+                setTimeout(() => {
+                    if (aiLoadingText) aiLoadingText.textContent = step.text;
+                }, step.delay);
+            });
+
+            // 診断の実行
+            setTimeout(() => {
+                aiLoadingContainer.classList.add('hidden');
+                aiAnalyzeBtn.disabled = false;
+                aiAnalyzeBtn.style.opacity = '1';
+                aiAnalyzeBtn.innerHTML = '<span>✨</span> 診断を再開する';
+                
+                runAiDiagnosis();
+            }, 2400);
+        });
+    }
+
+    function runAiDiagnosis() {
+        const advices = [];
+
+        // 1. キャッシュフローの診断
+        let unpaidDebts = {};
+        ownedCards.forEach(oc => unpaidDebts[oc.id] = 0);
+        
+        let cashOnHand = 0;
+        const cashAsset = ownedCards.find(c => c.id === 'cash');
+        if (cashAsset) cashOnHand = cashAsset.balance;
+        
+        let cashExpenses = 0;
+        let cardExpenses = {};
+        
+        expenseHistory.forEach(record => {
+            const preset = baseCardPresets.find(p => p.name === record.cardName);
+            if (preset) {
+                if (preset.id === 'cash') {
+                    cashExpenses += record.amount;
+                } else if (preset.group !== '電子マネー・現金') {
+                    if (!record.cleared) {
+                        cardExpenses[preset.id] = (cardExpenses[preset.id] || 0) + record.amount;
+                    }
+                } else {
+                    cashExpenses += record.amount;
+                }
+            }
+        });
+        
+        const todayObj = new Date();
+        const currentYear = todayObj.getFullYear();
+        const currentMonth = todayObj.getMonth() + 1;
+        
+        let fixedExpensesTotal = 0;
+        let fixedExpensesCash = 0;
+        fixedExpenses.forEach(exp => {
+            fixedExpensesTotal += exp.amount;
+            const preset = baseCardPresets.find(p => p.id === exp.cardId);
+            if (preset) {
+                if (preset.id === 'cash' || preset.group === '電子マネー・現金') {
+                    fixedExpensesCash += exp.amount;
+                } else {
+                    cardExpenses[preset.id] = (cardExpenses[preset.id] || 0) + exp.amount;
+                }
+            }
+        });
+
+        const currentRealCash = cashOnHand - cashExpenses - fixedExpensesCash;
+        
+        // 直近のカード引き落とし予定
+        const futurePayments = {};
+        expenseHistory.forEach(record => {
+            const preset = baseCardPresets.find(p => p.name === record.cardName);
+            if (preset && preset.group !== '電子マネー・現金' && preset.id !== 'cash' && !record.cleared) {
+                const oc = ownedCards.find(c => c.id === preset.id);
+                const closing = (oc && oc.closingDay !== undefined) ? oc.closingDay : 15;
+                const payment = (oc && oc.paymentDay !== undefined) ? oc.paymentDay : 10;
+                const offset = (oc && oc.paymentMonthOffset !== undefined) ? oc.paymentMonthOffset : 1;
+                const payDate = getScheduledPaymentDate(record.date, closing, payment, offset);
+                futurePayments[payDate] = (futurePayments[payDate] || 0) + record.amount;
+            }
+        });
+        fixedExpenses.forEach(exp => {
+            const preset = baseCardPresets.find(p => p.id === exp.cardId);
+            if (preset && preset.group !== '電子マネー・現金' && preset.id !== 'cash') {
+                let targetDay = exp.day;
+                if (targetDay === '月末') {
+                    targetDay = new Date(currentYear, currentMonth, 0).getDate();
+                }
+                const expDateStr = `${currentYear}/${String(currentMonth).padStart(2, '0')}/${String(targetDay).padStart(2, '0')}`;
+                const oc = ownedCards.find(c => c.id === preset.id);
+                const closing = (oc && oc.closingDay !== undefined) ? oc.closingDay : 15;
+                const payment = (oc && oc.paymentDay !== undefined) ? oc.paymentDay : 10;
+                const offset = (oc && oc.paymentMonthOffset !== undefined) ? oc.paymentMonthOffset : 1;
+                const payDate = getScheduledPaymentDate(expDateStr, closing, payment, offset);
+                futurePayments[payDate] = (futurePayments[payDate] || 0) + exp.amount;
+            }
+        });
+
+        const sortedPayDates = Object.keys(futurePayments).sort();
+        const nextPaymentAmount = sortedPayDates.length > 0 ? futurePayments[sortedPayDates[0]] : 0;
+        const nextPaymentDateStr = sortedPayDates.length > 0 ? sortedPayDates[0] : null;
+        const realAvailableCashVal = currentRealCash - nextPaymentAmount;
+
+        if (realAvailableCashVal < 0) {
+            const dateText = nextPaymentDateStr ? `${nextPaymentDateStr.split('/')[1]}/${nextPaymentDateStr.split('/')[2]}払い` : '次回';
+            advices.push({
+                type: 'warning',
+                badge: 'キャッシュフロー警告',
+                title: '直近の引き落とし資金が不足するリスクがあります',
+                desc: `直近のカード引き落とし予定額（¥${Math.floor(nextPaymentAmount).toLocaleString()}、${dateText}）に対して、実質余裕資金が <strong>-¥${Math.floor(Math.abs(realAvailableCashVal)).toLocaleString()}</strong> となっています。引き落とし日までに口座残高を確認し、資金を入金するか、新規の支出を一時的に抑えましょう。`,
+                icon: '⚠️'
+            });
+        } else {
+            advices.push({
+                type: 'success',
+                badge: 'キャッシュフロー健全',
+                title: '手元のキャッシュバランスは安定しています',
+                desc: `直近のカード引き落とし予定額を差し引いても、実質余裕資金は <strong>¥${Math.floor(realAvailableCashVal).toLocaleString()}</strong> 残る見込みです。この調子で予算管理を維持してください。`,
+                icon: '✅'
+            });
+        }
+
+        // 2. ポイ活最適化（特約店）の診断
+        let lossPoints = 0;
+        let smccTargetSpend = 0;
+        
+        expenseHistory.forEach(record => {
+            const memo = (record.memo || '').toLowerCase();
+            const shopName = (record.shopName || '').toLowerCase();
+            const textToTest = memo + ' ' + shopName;
+            
+            const isTargetShop = /セブン|セブイレ|ローソン|ファミマ|ファミリーマート|マック|マクドナルド|サイゼ|すき家|ココス|ドトール|はま寿司|しゃぶ葉|バーミヤン|ジョナサン|ガスト/.test(textToTest);
+            
+            if (isTargetShop) {
+                smccTargetSpend += record.amount;
+                const isSmcc = record.cardName && record.cardName.includes('三井住友');
+                if (!isSmcc) {
+                    lossPoints += record.amount * 0.065; // 7%還元と通常0.5%還元の差分
+                }
+            }
+        });
+
+        if (smccTargetSpend > 0) {
+            if (lossPoints > 0) {
+                advices.push({
+                    type: 'suggestion',
+                    badge: '特約店ポイ活',
+                    title: 'コンビニ・飲食店での支払いを最適化できます',
+                    desc: `最近、対象のコンビニや飲食店で合計 <strong>¥${Math.floor(smccTargetSpend).toLocaleString()}</strong> の利用があります。これらを「三井住友カード (NL)」等のスマホタッチ決済で支払うと、最大7%還元（<strong>${Math.floor(smccTargetSpend * 0.07)} pt</strong>）が得られます。現在、他決済を使用しているため約 <strong>${Math.floor(lossPoints)} pt</strong> の獲得機会を逃しています。`,
+                    icon: '🏪'
+                });
+            } else {
+                advices.push({
+                    type: 'success',
+                    badge: '特約店ポイ活優秀',
+                    title: '特約店でのタッチ決済を完璧に使いこなしています！',
+                    desc: `コンビニや飲食店（利用額 ¥${Math.floor(smccTargetSpend).toLocaleString()}）にて、高還元率なタッチ決済を正しく選択できています。この調子でスマホ決済を徹底しましょう。`,
+                    icon: '✨'
+                });
+            }
+        } else {
+            advices.push({
+                type: 'info',
+                badge: '還元率最適化',
+                title: '高還元率カードの活用をご検討ください',
+                desc: '日常の支払いで還元率1.0%以上のカード（楽天カードやJCB CARD Wなど）をメインに据えることで、毎月の生活費から自動的により多くのポイントを貯めることができます。現在お持ちのカードを見直してみましょう。',
+                icon: '💳'
+            });
+        }
+
+        // 3. 固定費の診断
+        let bestCardForFixed = null;
+        let bestRate = 0;
+        ownedCards.forEach(oc => {
+            const preset = baseCardPresets.find(p => p.id === oc.id);
+            if (preset && preset.id !== 'cash' && preset.group !== '電子マネー・現金') {
+                const basicRate = preset.unitPoints / preset.unitAmount;
+                if (basicRate > bestRate) {
+                    bestRate = basicRate;
+                    bestCardForFixed = preset;
+                }
+            }
+        });
+
+        let hasScatteredFixed = false;
+        let scatteredCount = 0;
+        let fixedSpendToConsolidate = 0;
+        let currentFixedTotal = 0;
+        
+        fixedExpenses.forEach(exp => {
+            currentFixedTotal += exp.amount;
+            if (bestCardForFixed && exp.cardId !== bestCardForFixed.id) {
+                hasScatteredFixed = true;
+                scatteredCount++;
+                fixedSpendToConsolidate += exp.amount;
+            }
+        });
+
+        if (fixedExpenses.length === 0) {
+            advices.push({
+                type: 'info',
+                badge: '固定費（サブスク）',
+                title: '固定費を登録してポイント獲得チャンスを広げましょう',
+                desc: '家賃、光熱費、通信費、サブスクリプションなどの固定費を登録すると、毎月の引き落とし予測や、メインカード集約によるポイントシミュレーションが可能になります。',
+                icon: '🔄'
+            });
+        } else if (hasScatteredFixed && bestCardForFixed) {
+            const annualSpend = fixedSpendToConsolidate * 12;
+            const extraPoints = annualSpend * (bestRate - 0.005);
+            const displayPoints = Math.max(Math.floor(extraPoints), 100);
+            
+            advices.push({
+                type: 'suggestion',
+                badge: '固定費の見直し',
+                title: `固定費の支払いを「${bestCardForFixed.name}」へ集約しましょう`,
+                desc: `現在登録されている固定費のうち、<strong>${scatteredCount} 件</strong>（月額合計 ¥${fixedSpendToConsolidate.toLocaleString()}）の支払いが分散または現金払いになっています。これらを還元率の良い「${bestCardForFixed.name}」に集約すると、年間でさらに約 <strong>${displayPoints} pt</strong> 相当のポイントを多く獲得できます。`,
+                icon: '💸'
+            });
+        } else {
+            advices.push({
+                type: 'success',
+                badge: '固定費最適化済み',
+                title: '固定費の支払い集約は完璧です！',
+                desc: '登録されているすべての固定費が、現在最も還元率の高いカードに集約されています。毎月自動で効率的にポイントが貯まっています。',
+                icon: '🎯'
+            });
+        }
+
+        // 4. マイル目標の診断
+        const savedGoal = JSON.parse(localStorage.getItem('sim_mile_goal')) || { airline: 'ana', dest: 'none' };
+        if (savedGoal.dest === 'none') {
+            advices.push({
+                type: 'info',
+                badge: 'マイル目標',
+                title: 'マイルの目的地を設定してみましょう',
+                desc: '「目標設定」からハワイやパリなどの目的地を設定すると、現在の保有マイルや毎月の支出ペースから、達成予測時期の算出と最適なフライトマップシミュレーションが動き出します。',
+                icon: '✈️'
+            });
+        } else {
+            let totalAna = 0;
+            let totalJal = 0;
+            const pointTotals = {};
+            
+            ownedCards.forEach(oc => {
+                const preset = baseCardPresets.find(p => p.id === oc.id);
+                if (preset && oc.balance > 0 && preset.id !== 'cash') {
+                    if (!pointTotals[preset.pointType]) {
+                        pointTotals[preset.pointType] = { amount: 0, anaRate: preset.anaRate, jalRate: preset.jalRate };
+                    }
+                    pointTotals[preset.pointType].amount += oc.balance;
+                }
+            });
+
+            expenseHistory.forEach(record => {
+                const preset = baseCardPresets.find(p => p.name === record.cardName);
+                if (preset && preset.id !== 'cash') {
+                    if (!pointTotals[preset.pointType]) {
+                        pointTotals[preset.pointType] = { amount: 0, anaRate: preset.anaRate, jalRate: preset.jalRate };
+                    }
+                    if (record.points) {
+                        pointTotals[preset.pointType].amount += record.points;
+                    }
+                }
+            });
+
+            Object.keys(pointTotals).forEach(type => {
+                if (type === 'なし') return;
+                const pt = pointTotals[type];
+                totalAna += pt.amount * pt.anaRate;
+                totalJal += pt.amount * pt.jalRate;
+            });
+
+            const isAna = savedGoal.airline === 'ana';
+            const currentMiles = isAna ? totalAna : totalJal;
+            const requiredMiles = goalDestinations[savedGoal.dest] || 0;
+            
+            const destMappings = {
+                okinawa: '沖縄',
+                seoul: 'ソウル',
+                hawaii: 'ハワイ',
+                ny: 'ニューヨーク',
+                paris: 'パリ'
+            };
+            const destName = destMappings[savedGoal.dest] || '目的地';
+            
+            if (currentMiles >= requiredMiles) {
+                advices.push({
+                    type: 'success',
+                    badge: '目標マイル達成',
+                    title: `おめでとうございます！${destName}旅行分のマイルを達成しています`,
+                    desc: `現在保有しているマイル（換算 ${Math.floor(currentMiles).toLocaleString()} マイル）は、目的地「${destName}」への必要マイル数（${requiredMiles.toLocaleString()} マイル）を超えています。特典航空券の発行や予約の準備を進めましょう！`,
+                    icon: '🎉'
+                });
+            } else {
+                const diff = requiredMiles - currentMiles;
+                
+                const activeMonths = new Set();
+                expenseHistory.forEach(r => activeMonths.add(r.date.substring(0, 7)));
+                const numMonths = Math.max(activeMonths.size, 1);
+                let averageMonthlyMiles = currentMiles / numMonths;
+                if (averageMonthlyMiles < 50) averageMonthlyMiles = 500;
+                
+                const monthsNeeded = Math.ceil(diff / averageMonthlyMiles);
+                const targetReachDate = new Date();
+                targetReachDate.setMonth(targetReachDate.getMonth() + monthsNeeded);
+                const reachYear = targetReachDate.getFullYear();
+                const reachMonth = targetReachDate.getMonth() + 1;
+                
+                let routeTip = '';
+                if (isAna) {
+                    routeTip = 'Vポイントをソラシドマイルに交換（還元率200%）して沖縄方面へ行くか、JQみずほルート（Vポイント/JRキューポ →永久不滅ポイント →ANAマイル 70%レート）を活用するのがお勧めです。';
+                } else {
+                    routeTip = 'エポスゴールドカードやセゾンゴールドカードなどのマイル還元アップキャンペーンを利用するか、PontaポイントのJALマイル増量キャンペーン時を狙って交換するのがお勧めです。';
+                }
+
+                advices.push({
+                    type: 'info',
+                    badge: 'マイルロードマップ',
+                    title: `${destName}到達まではあと約 ${monthsNeeded} ヶ月の見込みです`,
+                    desc: `目標の ${destName}（必要: ${requiredMiles.toLocaleString()} マイル）まで、あと <strong>${Math.ceil(diff).toLocaleString()} マイル</strong> 必要です。現在のペース（月平均 ${Math.floor(averageMonthlyMiles)} マイル）では <strong>${reachYear}年${reachMonth}月頃</strong> の達成予測です。<br><span style="display:block; margin-top:0.4rem; font-size:0.75rem; color:var(--text-muted);">💡 ${routeTip}</span>`,
+                    icon: '✈️'
+                });
+            }
+        }
+
+        // アドバイスカードをHTMLとしてコンテナに挿入
+        aiResultsContainer.innerHTML = '';
+        advices.forEach((adv, index) => {
+            const delay = 0.1 + index * 0.2;
+            const cardHtml = `
+                <div class="ai-card ${adv.type}" style="animation-delay: ${delay}s;">
+                    <div class="ai-card-icon">${adv.icon}</div>
+                    <div class="ai-card-content">
+                        <span class="ai-card-badge">${adv.badge}</span>
+                        <div class="ai-card-title">${adv.title}</div>
+                        <div class="ai-card-desc">${adv.desc}</div>
+                    </div>
+                </div>
+            `;
+            aiResultsContainer.insertAdjacentHTML('beforeend', cardHtml);
+        });
+    }
 
     // Initialization
     initSetup();

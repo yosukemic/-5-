@@ -702,6 +702,61 @@ body {
 @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideIn { from { opacity: 0; transform: translateX(-15px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+@keyframes highlight-pulse {
+    0% {
+        background-color: rgba(79, 70, 229, 0.25);
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
+    }
+    100% {
+        background-color: rgba(255, 255, 255, 0.7);
+        border-color: #cbd5e1;
+        box-shadow: none;
+    }
+}
+.highlight-input {
+    animation: highlight-pulse 1.8s ease-out;
+}
+.ocr-action-btn:hover {
+    filter: brightness(0.95);
+    transform: translateY(-0.5px);
+}
+.ocr-action-btn:active {
+    transform: translateY(0.5px);
+}
+
+@keyframes ocr-flash {
+    0% { opacity: 0.95; }
+    100% { opacity: 0; }
+}
+.ocr-flash-active {
+    animation: ocr-flash 0.3s ease-out forwards;
+}
+
+.suggestion-cat-badge {
+    font-size: 0.7rem;
+    background: rgba(79, 70, 229, 0.08);
+    border: 1px solid rgba(79, 70, 229, 0.15);
+    color: var(--accent-primary);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+    font-weight: bold;
+}
+
+@keyframes jet-float {
+    0% { transform: translate(-50%, -55%) rotate(0deg); }
+    50% { transform: translate(-50%, -45%) rotate(2deg); }
+    100% { transform: translate(-50%, -55%) rotate(0deg); }
+}
+
+#flight-jet {
+    animation: jet-float 3s ease-in-out infinite;
+}
 
 /* Autocomplete Suggestions */
 .autocomplete-wrapper {
@@ -861,4 +916,121 @@ body {
 }
 .route-step-node:hover {
     transform: translateX(4px);
+}
+
+/* AI Advisor Styles */
+#ai-advisor-panel {
+    position: relative;
+    overflow: hidden;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.ai-card {
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 1.2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ai-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+}
+
+.ai-card.warning {
+    border-left: 5px solid #ef4444;
+    background: rgba(239, 68, 68, 0.04);
+}
+
+.ai-card.success {
+    border-left: 5px solid #10b981;
+    background: rgba(16, 185, 129, 0.04);
+}
+
+.ai-card.info {
+    border-left: 5px solid #3b82f6;
+    background: rgba(59, 130, 246, 0.04);
+}
+
+.ai-card.suggestion {
+    border-left: 5px solid #8b5cf6;
+    background: rgba(139, 92, 246, 0.04);
+}
+
+.ai-card-icon {
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.6);
+    padding: 0.6rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    flex-shrink: 0;
+}
+
+.ai-card-content {
+    flex-grow: 1;
+}
+
+.ai-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 0.3rem;
+}
+
+.ai-card-desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.ai-card-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.65rem;
+    font-weight: bold;
+    border-radius: 20px;
+    margin-bottom: 0.4rem;
+}
+
+.ai-card.warning .ai-card-badge {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.ai-card.success .ai-card-badge {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.ai-card.info .ai-card-badge {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.ai-card.suggestion .ai-card-badge {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+@keyframes slideInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
