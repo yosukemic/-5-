@@ -5,7 +5,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerDesc = document.getElementById('header-desc');
 
     const cardChecklist = document.getElementById('card-checklist');
+    const cardSelectDropdown = document.getElementById('card-select-dropdown');
+    const addCardBtn = document.getElementById('add-card-btn');
     const saveCardsBtn = document.getElementById('save-cards-btn');
+    const bankChecklist = document.getElementById('bank-checklist');
+    const bankSelectDropdown = document.getElementById('bank-select-dropdown');
+    const addBankBtn = document.getElementById('add-bank-btn');
     const calcForm = document.getElementById('calc-form');
     // We don't need shopSelect anymore since we changed to autocomplete
     const amountInput = document.getElementById('amount');
@@ -125,19 +130,100 @@ document.addEventListener('DOMContentLoaded', () => {
     if(goalDestination) goalDestination.addEventListener('change', saveAndRenderGoal);
 
     // --- State ---
-    let ownedCards = JSON.parse(localStorage.getItem('sim_owned_cards')) || [];
-    if (ownedCards.length > 0 && typeof ownedCards[0] === 'string') {
-        ownedCards = ownedCards.map(id => ({ id: id, balance: 0 }));
-        localStorage.setItem('sim_owned_cards', JSON.stringify(ownedCards));
+    let ownedCards = [];
+    try {
+        const storedOwned = localStorage.getItem('sim_owned_cards');
+        if (storedOwned) {
+            ownedCards = JSON.parse(storedOwned);
+        }
+    } catch(e) {
+        console.error("Failed to parse sim_owned_cards from localStorage:", e);
+        ownedCards = [];
     }
     
-    let expenseHistory = JSON.parse(localStorage.getItem('sim_expense_history')) || [];
-    let fixedExpenses = JSON.parse(localStorage.getItem('sim_fixed_expenses')) || [];
+    // --- State: Banks ---
+    let ownedBanks = [];
+    try {
+        const storedBanks = localStorage.getItem('sim_owned_banks');
+        if (storedBanks) {
+            ownedBanks = JSON.parse(storedBanks);
+        }
+    } catch(e) {
+        console.error("Failed to parse sim_owned_banks from localStorage:", e);
+        ownedBanks = [];
+    }
+    if (!Array.isArray(ownedBanks)) {
+        ownedBanks = [];
+    }
+    
+    if (!Array.isArray(ownedCards)) {
+        ownedCards = [];
+    }
+
+    if (ownedCards.length > 0 && typeof ownedCards[0] === 'string') {
+        ownedCards = ownedCards.map(id => ({ id: id, balance: 0 }));
+    }
+
+    // 手持ち現金 (id: 'cash') が ownedCards に含まれていない場合は必ず追加する
+    const hasCash = ownedCards.some(oc => oc.id === 'cash');
+    if (!hasCash) {
+        ownedCards.unshift({
+            id: 'cash',
+            balance: 0,
+            customRate: null,
+            eposShops: [],
+            closingDay: 30,
+            paymentDay: 27,
+            paymentMonthOffset: 1
+        });
+    }
+    localStorage.setItem('sim_owned_cards', JSON.stringify(ownedCards));
+    
+    let expenseHistory = [];
+    try {
+        const storedHistory = localStorage.getItem('sim_expense_history');
+        if (storedHistory) {
+            expenseHistory = JSON.parse(storedHistory);
+        }
+    } catch(e) {
+        console.error("Failed to parse sim_expense_history:", e);
+        expenseHistory = [];
+    }
+    if (!Array.isArray(expenseHistory)) {
+        expenseHistory = [];
+    }
+
+    let fixedExpenses = [];
+    try {
+        const storedFixed = localStorage.getItem('sim_fixed_expenses');
+        if (storedFixed) {
+            fixedExpenses = JSON.parse(storedFixed);
+        }
+    } catch(e) {
+        console.error("Failed to parse sim_fixed_expenses:", e);
+        fixedExpenses = [];
+    }
+    if (!Array.isArray(fixedExpenses)) {
+        fixedExpenses = [];
+    }
     let scheduledPaymentDates = {};
     
     let currentCalDate = new Date();
     let selectedDateStr = null; // YYYY/MM/DD
     let pendingRecord = null;
+
+    // --- Data: Banks ---
+    const baseBankPresets = [
+        { id: 'mufg_bank', name: '三菱UFJ銀行' },
+        { id: 'smbc_bank', name: '三井住友銀行' },
+        { id: 'mizuho_bank', name: 'みずほ銀行' },
+        { id: 'yucho_bank', name: 'ゆうちょ銀行' },
+        { id: 'rakuten_bank', name: '楽天銀行' },
+        { id: 'sbi_bank', name: '住信SBIネット銀行' },
+        { id: 'paypay_bank', name: 'PayPay銀行' },
+        { id: 'aeon_bank', name: 'イオン銀行' },
+        { id: 'sony_bank', name: 'ソニー銀行' }
+    ];
 
     // --- Data: Cards ---
     const baseCardPresets = [
@@ -507,6 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.removeItem('sim_owned_cards');
                 localStorage.removeItem('sim_expense_history');
                 localStorage.removeItem('sim_fixed_expenses');
+                localStorage.removeItem('sim_owned_banks');
                 location.reload();
             }
         });
@@ -514,10 +601,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (saveCardsBtn) {
         saveCardsBtn.addEventListener('click', () => {
-            ownedCards = [];
-            document.querySelectorAll('.check-item.selected').forEach(item => {
+            const updatedOwnedCards = [];
+            
+            // 手持ち現金の情報を取得して追加
+            const setupCashInput = document.getElementById('setup-cash-input');
+            const cashBalance = setupCashInput ? (parseInt(setupCashInput.value) || 0) : 0;
+            const existingCash = ownedCards.find(c => c.id === 'cash');
+            const cashData = existingCash ? { ...existingCash, balance: cashBalance } : {
+                id: 'cash',
+                balance: cashBalance,
+                customRate: null,
+                eposShops: [],
+                closingDay: 30,
+                paymentDay: 27,
+                paymentMonthOffset: 1
+            };
+            updatedOwnedCards.push(cashData);
+
+            cardChecklist.querySelectorAll('.check-item').forEach(item => {
                 const id = item.dataset.id;
-                const balance = parseInt(item.querySelector('.balance-input').value) || 0;
+                if (id === 'cash') return; // cashはすでに個別に追加済み
+                
+                const balanceInput = item.querySelector('.balance-input');
+                const balance = balanceInput ? (parseInt(balanceInput.value) || 0) : 0;
                 
                 let customRate = null;
                 const rateInput = item.querySelector('.custom-rate-input');
@@ -535,9 +641,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 const paymentSel = item.querySelector('.payment-day-select');
                 if (paymentSel) paymentDay = parseInt(paymentSel.value);
                 
-                ownedCards.push({ id, balance, customRate, eposShops, closingDay, paymentDay, paymentMonthOffset: 1 });
+                let withdrawalBankId = '';
+                const bankSel = item.querySelector('.withdrawal-bank-select');
+                if (bankSel) withdrawalBankId = bankSel.value;
+                
+                let initialNextPayment = 0;
+                const initialNextInput = item.querySelector('.initial-next-payment-input');
+                if (initialNextInput) initialNextPayment = parseInt(initialNextInput.value) || 0;
+                
+                let initialSubsequentPayment = 0;
+                const initialSubsequentInput = item.querySelector('.initial-subsequent-payment-input');
+                if (initialSubsequentInput) initialSubsequentPayment = parseInt(initialSubsequentInput.value) || 0;
+                
+                updatedOwnedCards.push({ 
+                    id, 
+                    balance, 
+                    customRate, 
+                    eposShops, 
+                    closingDay, 
+                    paymentDay, 
+                    paymentMonthOffset: 1, 
+                    withdrawalBankId,
+                    initialNextPayment,
+                    initialSubsequentPayment
+                });
             });
+            ownedCards = updatedOwnedCards;
             localStorage.setItem('sim_owned_cards', JSON.stringify(ownedCards));
+
+            // 銀行口座の情報を取得して追加
+            const updatedOwnedBanks = [];
+            if (bankChecklist) {
+                bankChecklist.querySelectorAll('.check-item').forEach(item => {
+                    const id = item.dataset.id;
+                    const balanceInput = item.querySelector('.bank-balance-input');
+                    const balance = balanceInput ? (parseInt(balanceInput.value) || 0) : 0;
+                    updatedOwnedBanks.push({ id, balance });
+                });
+            }
+            ownedBanks = updatedOwnedBanks;
+            localStorage.setItem('sim_owned_banks', JSON.stringify(ownedBanks));
+
             updateFixedCardSelect();
             switchView('view-simulator');
         });
@@ -585,190 +729,335 @@ document.addEventListener('DOMContentLoaded', () => {
         // サブスク支払手段のセレクトボックス更新
         updateFixedCardSelect();
 
-        cardChecklist.innerHTML = '';
-        
-        // Group cards
-        const groups = {};
-        baseCardPresets.forEach(card => {
-            if (!groups[card.group]) groups[card.group] = [];
-            groups[card.group].push(card);
-        });
-        
-        for (const [groupName, cards] of Object.entries(groups)) {
-            const groupEl = document.createElement('div');
-            groupEl.className = 'accordion-group';
-            
-            const hasSelected = cards.some(c => ownedCards.some(oc => oc.id === c.id));
-            if (hasSelected) groupEl.classList.add('open');
-            
-            const headerHtml = `
-                <div class="accordion-header">
-                    <span>${groupName}</span>
-                    <span class="accordion-icon">▼</span>
-                </div>
-            `;
-            groupEl.insertAdjacentHTML('beforeend', headerHtml);
-            
-            const contentEl = document.createElement('div');
-            contentEl.className = `accordion-content ${hasSelected ? 'active' : ''}`;
-            
-            cards.forEach(card => {
-                const ownedObj = ownedCards.find(c => c.id === card.id);
-                const isChecked = ownedObj ? 'checked' : '';
-                const selectedClass = ownedObj ? 'selected' : '';
-                const balance = ownedObj ? ownedObj.balance : 0;
-                
-                let extraInputsHtml = '';
-                if (['smcc_nl', 'smcc_gold_nl', 'smcc_platinum_pref', 'olive_normal', 'olive_gold', 'olive_platinum', 'mufg'].includes(card.id)) {
-                    const defaultRate = card.id === 'mufg' ? 19 : 7;
-                    const cRate = (ownedObj && ownedObj.customRate) ? ownedObj.customRate : defaultRate;
-                    extraInputsHtml = `
-                        <div class="custom-inputs-container mt-2" style="font-size:0.8rem; color:#94a3b8; background:#f1f5f9; border:1px solid #e2e8f0; padding:0.5rem; border-radius:6px; margin-top:0.5rem;">
-                            現在の対象店舗還元率: <input type="number" class="custom-rate-input" value="${cRate}" min="0" max="20" step="0.5" style="width:60px; padding:0.2rem; border-radius:4px; border:none; background:#f8fafc; border:1px solid #cbd5e1; color:var(--text-color); margin-left:0.3rem;"> %
-                        </div>
-                    `;
+        // 1. ドロップダウンの中身を生成（未所持カードのみ表示）
+        if (cardSelectDropdown) {
+            cardSelectDropdown.innerHTML = '<option value="" disabled selected>追加するカードを選択してください</option>';
+            const groups = {};
+            baseCardPresets.forEach(card => {
+                const isOwned = ownedCards.some(oc => oc.id === card.id);
+                if (!isOwned) {
+                    if (!groups[card.group]) groups[card.group] = [];
+                    groups[card.group].push(card);
                 }
-                
-                if (['epos_gold', 'epos_platinum'].includes(card.id)) {
-                    let shopOptionsHtml = '<option value="none">指定しない</option>';
-                    shops.forEach(s => {
-                        if (s.id !== 'normal' && s.id !== 'pointup') {
-                            shopOptionsHtml += `<option value="${s.id}">${s.name}</option>`;
-                        }
-                    });
-                    
-                    const s1 = (ownedObj && ownedObj.eposShops && ownedObj.eposShops[0]) ? ownedObj.eposShops[0] : 'none';
-                    const s2 = (ownedObj && ownedObj.eposShops && ownedObj.eposShops[1]) ? ownedObj.eposShops[1] : 'none';
-                    const s3 = (ownedObj && ownedObj.eposShops && ownedObj.eposShops[2]) ? ownedObj.eposShops[2] : 'none';
-                    
-                    extraInputsHtml = `
-                        <div class="custom-inputs-container mt-2" style="font-size:0.8rem; color:#94a3b8; background:#f1f5f9; border:1px solid #e2e8f0; padding:0.5rem; border-radius:6px; margin-top:0.5rem;">
-                            <div>選べるポイントアップショップ（3倍）</div>
-                            <div style="display:flex; flex-direction:column; gap:0.3rem; margin-top:0.3rem;">
-                                <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:none; background:#f8fafc; border:1px solid #cbd5e1; color:var(--text-color);">${shopOptionsHtml}</select>
-                                <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:none; background:#f8fafc; border:1px solid #cbd5e1; color:var(--text-color);">${shopOptionsHtml}</select>
-                                <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:none; background:#f8fafc; border:1px solid #cbd5e1; color:var(--text-color);">${shopOptionsHtml}</select>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // クレジットカードの締め日・引き落とし日設定フォームの生成
-                let billingInputsHtml = '';
-                if (card.group !== '電子マネー・現金') {
-                    let defaultClosing = 15;
-                    let defaultPayment = 10;
-                    
-                    // デフォルトの推定マッピング
-                    if (['rakuten', 'rakuten_gold', 'rakuten_premium', 'paypay', 'paypay_gold', 'aupay', 'aupay_gold'].includes(card.id)) {
-                        defaultClosing = 30; // 月末締め
-                        defaultPayment = 27; // 27日払い
-                    } else if (['smcc_nl', 'smcc_gold_nl', 'smcc_platinum_pref', 'olive_normal', 'olive_gold', 'olive_platinum', 'dcard', 'dcard_gold', 'mufg', 'jcb_w', 'jcb_general', 'ana_card', 'ana_visa_gold', 'ana_student'].includes(card.id)) {
-                        defaultClosing = 15; // 15日締め
-                        defaultPayment = 10; // 10日払い
-                    } else {
-                        defaultClosing = 30; // その他は月末締め
-                        defaultPayment = 27; // 27日払いをデフォルトとする
-                    }
-                    
-                    const savedClosing = (ownedObj && ownedObj.closingDay !== undefined) ? ownedObj.closingDay : defaultClosing;
-                    const savedPayment = (ownedObj && ownedObj.paymentDay !== undefined) ? ownedObj.paymentDay : defaultPayment;
-                    
-                    billingInputsHtml = `
-                        <div class="card-billing-container mt-2" style="font-size:0.8rem; color:var(--text-muted); background:rgba(0,0,0,0.02); border:1px solid var(--glass-border); padding:0.6rem; border-radius:8px; margin-top:0.5rem; width:100%;">
-                            <div style="font-weight:bold; margin-bottom:0.4rem; color:var(--text-color);">📅 締め日・引き落とし日設定</div>
-                            <div style="display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:0.2rem;">
-                                <div>
-                                    締め日: 
-                                    <select class="closing-day-select">
-                                        <option value="10" ${savedClosing === 10 ? 'selected' : ''}>10日</option>
-                                        <option value="15" ${savedClosing === 15 ? 'selected' : ''}>15日</option>
-                                        <option value="20" ${savedClosing === 20 ? 'selected' : ''}>20日</option>
-                                        <option value="25" ${savedClosing === 25 ? 'selected' : ''}>25日</option>
-                                        <option value="30" ${savedClosing === 30 ? 'selected' : ''}>月末</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    引き落とし日: 
-                                    <select class="payment-day-select">
-                                        <option value="10" ${savedPayment === 10 ? 'selected' : ''}>翌月10日</option>
-                                        <option value="26" ${savedPayment === 26 ? 'selected' : ''}>翌月26日</option>
-                                        <option value="27" ${savedPayment === 27 ? 'selected' : ''}>翌月27日</option>
-                                        <option value="30" ${savedPayment === 30 ? 'selected' : ''}>翌月末</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                const html = `
-                    <label class="check-item ${selectedClass}" data-id="${card.id}">
-                        <div class="check-item-main">
-                            <input type="checkbox" value="${card.id}" class="card-checkbox" ${isChecked}>
-                            <span class="check-item-label">${card.name}</span>
-                        </div>
-                        <div class="balance-input-container">
-                            現在残高: <input type="number" class="balance-input" value="${balance}" min="0"> ${card.unitName}
-                        </div>
-                        ${extraInputsHtml}
-                        ${billingInputsHtml}
-                    </label>
-                `;
-                contentEl.insertAdjacentHTML('beforeend', html);
             });
-            
-            groupEl.appendChild(contentEl);
-            cardChecklist.appendChild(groupEl);
-            
-            // Set select values for epos
-            cards.forEach(card => {
-                if (['epos_gold', 'epos_platinum'].includes(card.id)) {
-                    const ownedObj = ownedCards.find(c => c.id === card.id);
-                    if (ownedObj && ownedObj.eposShops) {
-                        const item = groupEl.querySelector(`[data-id="${card.id}"]`);
-                        if (item) {
-                            const selects = item.querySelectorAll('.epos-shop-select');
-                            if (selects.length === 3) {
-                                selects[0].value = ownedObj.eposShops[0] || 'none';
-                                selects[1].value = ownedObj.eposShops[1] || 'none';
-                                selects[2].value = ownedObj.eposShops[2] || 'none';
-                            }
-                        }
-                    }
+
+            for (const [groupName, cards] of Object.entries(groups)) {
+                const optGroup = document.createElement('optgroup');
+                optGroup.label = groupName;
+                cards.forEach(card => {
+                    const opt = document.createElement('option');
+                    opt.value = card.id;
+                    opt.textContent = card.name;
+                    optGroup.appendChild(opt);
+                });
+                cardSelectDropdown.appendChild(optGroup);
+            }
+        }
+
+        // 1.2 銀行ドロップダウンの中身を生成（未追加銀行のみ表示）
+        if (bankSelectDropdown) {
+            bankSelectDropdown.innerHTML = '<option value="" disabled selected>追加する銀行を選択してください</option>';
+            baseBankPresets.forEach(bank => {
+                const isOwned = ownedBanks.some(ob => ob.id === bank.id);
+                if (!isOwned) {
+                    const opt = document.createElement('option');
+                    opt.value = bank.id;
+                    opt.textContent = bank.name;
+                    bankSelectDropdown.appendChild(opt);
                 }
             });
         }
 
-        // Accordion toggle logic
-        document.querySelectorAll('.accordion-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const group = header.parentElement;
-                const content = group.querySelector('.accordion-content');
-                group.classList.toggle('open');
-                if (group.classList.contains('open')) {
-                    content.classList.add('active');
+        // 1.3 銀行口座（設定用フォーム）のレンダリング
+        if (bankChecklist) {
+            bankChecklist.innerHTML = '';
+            if (ownedBanks.length === 0) {
+                bankChecklist.innerHTML = `
+                    <div class="empty-state" style="border: 1px dashed var(--glass-border); border-radius:12px; padding:1.5rem; background:rgba(255,255,255,0.15); text-align:center; width: 100%;">
+                        <div style="font-size:2rem; margin-bottom:0.5rem;">🏦</div>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin:0;">登録されている銀行口座がありません。<br>上のドロップダウンから選択して追加してください。</p>
+                    </div>
+                `;
+            } else {
+                ownedBanks.forEach(ob => {
+                    const bank = baseBankPresets.find(b => b.id === ob.id);
+                    if (!bank) return;
+                    
+                    const html = `
+                        <div class="check-item selected" data-id="${bank.id}" style="cursor:default; margin-bottom:0.8rem; width:100%;">
+                            <div class="check-item-main" style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                                <span class="check-item-label" style="font-weight:bold; font-size:1rem;">🏦 ${bank.name}</span>
+                                <button class="delete-bank-btn record-btn" data-id="${bank.id}" style="margin:0; padding:0.25rem 0.5rem; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.05); width:auto;">削除</button>
+                            </div>
+                            <div class="balance-input-container" style="display:flex; margin-top: 0.8rem; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                                現在残高: <input type="number" class="bank-balance-input" value="${ob.balance || 0}" min="0" style="width: 120px; padding: 0.4rem; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: var(--text-color); outline: none;"> 円
+                            </div>
+                        </div>
+                    `;
+                    bankChecklist.insertAdjacentHTML('beforeend', html);
+                });
+                
+                // 銀行削除ボタンのリスナー
+                bankChecklist.querySelectorAll('.delete-bank-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = e.target.dataset.id;
+                        ownedBanks = ownedBanks.filter(ob => ob.id !== id);
+                        initSetup();
+                    });
+                });
+            }
+        }
+
+        // 手持ち現金の初期値を設定
+        const setupCashInput = document.getElementById('setup-cash-input');
+        if (setupCashInput) {
+            const cashAsset = ownedCards.find(c => c.id === 'cash');
+            setupCashInput.value = cashAsset ? (cashAsset.balance || 0) : 0;
+        }
+
+        // 2. 所持しているカード（設定用フォーム）のレンダリング
+        cardChecklist.innerHTML = '';
+
+        const cardsWithoutCash = ownedCards.filter(oc => oc.id !== 'cash');
+        if (cardsWithoutCash.length === 0) {
+            cardChecklist.innerHTML = `
+                <div class="empty-state" style="border: 1px dashed var(--glass-border); border-radius:12px; padding:2rem; background:rgba(255,255,255,0.15); text-align:center; grid-column: 1 / -1; width: 100%;">
+                    <div style="font-size:2.5rem; margin-bottom:0.8rem;">💳</div>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin:0;">所持しているカードが登録されていません。<br>上のドロップダウンからカードを選択して追加してください。</p>
+                </div>
+            `;
+            renderFixedExpenses();
+            return;
+        }
+
+        cardsWithoutCash.forEach(oc => {
+            const card = baseCardPresets.find(p => p.id === oc.id);
+            if (!card) return;
+
+            const balance = oc.balance || 0;
+            let extraInputsHtml = '';
+
+            if (['smcc_nl', 'smcc_gold_nl', 'smcc_platinum_pref', 'olive_normal', 'olive_gold', 'olive_platinum', 'mufg'].includes(card.id)) {
+                const defaultRate = card.id === 'mufg' ? 19 : 7;
+                const cRate = oc.customRate !== undefined && oc.customRate !== null ? oc.customRate : defaultRate;
+                extraInputsHtml = `
+                    <div class="custom-inputs-container mt-2" style="font-size:0.8rem; color:#475569; background:rgba(255,255,255,0.5); border:1px solid var(--glass-border); padding:0.6rem; border-radius:8px; margin-top:0.5rem; width:100%;">
+                        現在の対象店舗還元率: <input type="number" class="custom-rate-input" value="${cRate}" min="0" max="20" step="0.5" style="width:65px; padding:0.2rem 0.4rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color); margin-left:0.3rem;"> %
+                    </div>
+                `;
+            }
+
+            if (['epos_gold', 'epos_platinum'].includes(card.id)) {
+                let shopOptionsHtml = '<option value="none">指定しない</option>';
+                shops.forEach(s => {
+                    if (s.id !== 'normal' && s.id !== 'pointup') {
+                        shopOptionsHtml += `<option value="${s.id}">${s.name}</option>`;
+                    }
+                });
+
+                extraInputsHtml = `
+                    <div class="custom-inputs-container mt-2" style="font-size:0.8rem; color:#475569; background:rgba(255,255,255,0.5); border:1px solid var(--glass-border); padding:0.6rem; border-radius:8px; margin-top:0.5rem; width:100%;">
+                        <div style="font-weight:bold; margin-bottom:0.3rem;">選べるポイントアップショップ（3倍）</div>
+                        <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                            <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color);">${shopOptionsHtml}</select>
+                            <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color);">${shopOptionsHtml}</select>
+                            <select class="epos-shop-select" style="padding:0.2rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color);">${shopOptionsHtml}</select>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // クレジットカードの締め日・引き落とし日設定フォームの生成
+            let billingInputsHtml = '';
+            if (card.group !== '電子マネー・現金' && card.id !== 'cash') {
+                let defaultClosing = 15;
+                let defaultPayment = 10;
+
+                if (['rakuten', 'rakuten_gold', 'rakuten_premium', 'paypay', 'paypay_gold', 'aupay', 'aupay_gold'].includes(card.id)) {
+                    defaultClosing = 30;
+                    defaultPayment = 27;
+                } else if (['smcc_nl', 'smcc_gold_nl', 'smcc_platinum_pref', 'olive_normal', 'olive_gold', 'olive_platinum', 'dcard', 'dcard_gold', 'mufg', 'jcb_w', 'jcb_general', 'ana_card', 'ana_visa_gold', 'ana_student'].includes(card.id)) {
+                    defaultClosing = 15;
+                    defaultPayment = 10;
                 } else {
-                    content.classList.remove('active');
+                    defaultClosing = 30;
+                    defaultPayment = 27;
                 }
+
+                const savedClosing = oc.closingDay !== undefined ? oc.closingDay : defaultClosing;
+                const savedPayment = oc.paymentDay !== undefined ? oc.paymentDay : defaultPayment;
+
+                billingInputsHtml = `
+                    <div class="card-billing-container mt-2" style="font-size:0.8rem; color:var(--text-muted); background:rgba(255,255,255,0.4); border:1px solid var(--glass-border); padding:0.6rem; border-radius:8px; margin-top:0.5rem; width:100%;">
+                        <div style="font-weight:bold; margin-bottom:0.4rem; color:var(--text-color);">📅 締め日・引き落とし日設定</div>
+                        <div style="display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:0.2rem;">
+                            <div>
+                                締め日: 
+                                <select class="closing-day-select" style="padding:0.15rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color);">
+                                    <option value="10" ${savedClosing === 10 ? 'selected' : ''}>10日</option>
+                                    <option value="15" ${savedClosing === 15 ? 'selected' : ''}>15日</option>
+                                    <option value="20" ${savedClosing === 20 ? 'selected' : ''}>20日</option>
+                                    <option value="25" ${savedClosing === 25 ? 'selected' : ''}>25日</option>
+                                    <option value="30" ${savedClosing === 30 ? 'selected' : ''}>月末</option>
+                                </select>
+                            </div>
+                            <div>
+                                引き落とし日: 
+                                <select class="payment-day-select" style="padding:0.15rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color);">
+                                    <option value="10" ${savedPayment === 10 ? 'selected' : ''}>翌月10日</option>
+                                    <option value="26" ${savedPayment === 26 ? 'selected' : ''}>翌月26日</option>
+                                    <option value="27" ${savedPayment === 27 ? 'selected' : ''}>翌月27日</option>
+                                    <option value="30" ${savedPayment === 30 ? 'selected' : ''}>翌月末</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            let bankSelectOptionsHtml = '<option value="">指定しない (現金から引き落とし)</option>';
+            ownedBanks.forEach(ob => {
+                const bankPreset = baseBankPresets.find(b => b.id === ob.id);
+                if (bankPreset) {
+                    const selectedAttr = oc.withdrawalBankId === ob.id ? 'selected' : '';
+                    bankSelectOptionsHtml += `<option value="${ob.id}" ${selectedAttr}>🏦 ${bankPreset.name}</option>`;
+                }
+            });
+
+            const withdrawalBankHtml = `
+                <div class="bank-link-container mt-2" style="font-size:0.8rem; color:var(--text-muted); background:rgba(255,255,255,0.4); border:1px solid var(--glass-border); padding:0.6rem; border-radius:8px; margin-top:0.5rem; width:100%;">
+                    <div style="font-weight:bold; margin-bottom:0.4rem; color:var(--text-color);">🏦 引き落とし口座の設定</div>
+                    <select class="withdrawal-bank-select" style="padding:0.15rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color); width:100%;">
+                        ${bankSelectOptionsHtml}
+                    </select>
+                </div>
+            `;
+
+            // 次回・次々回請求額の初期値入力欄の生成
+            const todayObjForInitial = new Date();
+            const todayStrForInitial = `${todayObjForInitial.getFullYear()}/${String(todayObjForInitial.getMonth() + 1).padStart(2, '0')}/${String(todayObjForInitial.getDate()).padStart(2, '0')}`;
+            const nextMonthDateForInitial = new Date(todayObjForInitial.getFullYear(), todayObjForInitial.getMonth() + 1, todayObjForInitial.getDate());
+            const nextMonthStrForInitial = `${nextMonthDateForInitial.getFullYear()}/${String(nextMonthDateForInitial.getMonth() + 1).padStart(2, '0')}/${String(nextMonthDateForInitial.getDate()).padStart(2, '0')}`;
+
+            const savedClosing = oc.closingDay !== undefined ? oc.closingDay : (['rakuten', 'rakuten_gold', 'rakuten_premium', 'paypay', 'paypay_gold', 'aupay', 'aupay_gold'].includes(card.id) ? 30 : 15);
+            const savedPayment = oc.paymentDay !== undefined ? oc.paymentDay : (['rakuten', 'rakuten_gold', 'rakuten_premium', 'paypay', 'paypay_gold', 'aupay', 'aupay_gold'].includes(card.id) ? 27 : 10);
+            const offset = oc.paymentMonthOffset !== undefined ? oc.paymentMonthOffset : 1;
+
+            const nextPayDate = getScheduledPaymentDate(todayStrForInitial, savedClosing, savedPayment, offset);
+            const subPayDate = getScheduledPaymentDate(nextMonthStrForInitial, savedClosing, savedPayment, offset);
+
+            const nextDateParts = nextPayDate.split('/');
+            const subDateParts = subPayDate.split('/');
+            const nextLabel = nextDateParts.length === 3 ? `${parseInt(nextDateParts[1])}/${parseInt(nextDateParts[2])}` : '次回';
+            const subLabel = subDateParts.length === 3 ? `${parseInt(subDateParts[1])}/${parseInt(subDateParts[2])}` : '次々回';
+
+            const initialPaymentsHtml = `
+                <div class="card-initial-payments-container mt-2" style="font-size:0.8rem; color:var(--text-muted); background:rgba(255,255,255,0.4); border:1px solid var(--glass-border); padding:0.6rem; border-radius:8px; margin-top:0.5rem; width:100%;">
+                    <div style="font-weight:bold; margin-bottom:0.4rem; color:var(--text-color);">📋 確定済み・現時点の未払い請求額</div>
+                    <div style="display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:0.2rem;">
+                        <div style="flex:1; min-width:120px;">
+                            <span class="next-payment-label">${nextLabel}</span>の請求額: 
+                            <input type="number" class="initial-next-payment-input" value="${oc.initialNextPayment || 0}" min="0" style="width:100%; padding:0.15rem 0.3rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color); margin-top:0.1rem;">
+                        </div>
+                        <div style="flex:1; min-width:120px;">
+                            <span class="subsequent-payment-label">${subLabel}</span>の請求額: 
+                            <input type="number" class="initial-subsequent-payment-input" value="${oc.initialSubsequentPayment || 0}" min="0" style="width:100%; padding:0.15rem 0.3rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color); margin-top:0.1rem;">
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const html = `
+                <div class="check-item selected" data-id="${card.id}" style="cursor:default; margin-bottom:0.8rem; width:100%;">
+                    <div class="check-item-main" style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                        <span class="check-item-label" style="font-weight:bold; font-size:1rem;">💳 ${card.name}</span>
+                        <button class="delete-card-btn record-btn" data-id="${card.id}" style="margin:0; padding:0.25rem 0.5rem; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.05); width:auto;">削除</button>
+                    </div>
+                    <div class="balance-input-container" style="display:flex; margin-top: 0.8rem; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                        現在残高: <input type="number" class="balance-input" value="${balance}" min="0" style="width: 100px; padding: 0.4rem; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: var(--text-color); outline: none;"> ${card.unitName}
+                    </div>
+                    ${extraInputsHtml}
+                    ${billingInputsHtml}
+                    ${card.group !== '電子マネー・現金' && card.id !== 'cash' ? withdrawalBankHtml : ''}
+                    ${card.group !== '電子マネー・現金' && card.id !== 'cash' ? initialPaymentsHtml : ''}
+                </div>
+            `;
+            cardChecklist.insertAdjacentHTML('beforeend', html);
+        });
+
+        // Eposショップの初期値設定
+        cardsWithoutCash.forEach(oc => {
+            if (['epos_gold', 'epos_platinum'].includes(oc.id)) {
+                if (oc.eposShops) {
+                    const item = cardChecklist.querySelector(`[data-id="${oc.id}"]`);
+                    if (item) {
+                        const selects = item.querySelectorAll('.epos-shop-select');
+                        if (selects.length === 3) {
+                            selects[0].value = oc.eposShops[0] || 'none';
+                            selects[1].value = oc.eposShops[1] || 'none';
+                            selects[2].value = oc.eposShops[2] || 'none';
+                        }
+                    }
+                }
+            }
+        });
+
+        // 削除ボタンのリスナー
+        cardChecklist.querySelectorAll('.delete-card-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.dataset.id;
+                ownedCards = ownedCards.filter(oc => oc.id !== id);
+                initSetup();
             });
         });
 
-        document.querySelectorAll('.card-checkbox').forEach(cb => {
-            cb.addEventListener('change', (e) => {
-                const item = e.target.closest('.check-item');
-                if (e.target.checked) item.classList.add('selected');
-                else item.classList.remove('selected');
-            });
+        // 締め日や引き落とし日のセレクトボックスが変更された時、次回・次々回のラベルを動的更新する
+        cardChecklist.querySelectorAll('.check-item').forEach(item => {
+            const closingSel = item.querySelector('.closing-day-select');
+            const paymentSel = item.querySelector('.payment-day-select');
+            
+            if (closingSel && paymentSel) {
+                const updateLabels = () => {
+                    const closing = parseInt(closingSel.value);
+                    const payment = parseInt(paymentSel.value);
+                    const offset = 1; // offsetは現状1固定
+
+                    const todayObjForInitial = new Date();
+                    const todayStrForInitial = `${todayObjForInitial.getFullYear()}/${String(todayObjForInitial.getMonth() + 1).padStart(2, '0')}/${String(todayObjForInitial.getDate()).padStart(2, '0')}`;
+                    const nextMonthDateForInitial = new Date(todayObjForInitial.getFullYear(), todayObjForInitial.getMonth() + 1, todayObjForInitial.getDate());
+                    const nextMonthStrForInitial = `${nextMonthDateForInitial.getFullYear()}/${String(nextMonthDateForInitial.getMonth() + 1).padStart(2, '0')}/${String(nextMonthDateForInitial.getDate()).padStart(2, '0')}`;
+
+                    const nextPayDate = getScheduledPaymentDate(todayStrForInitial, closing, payment, offset);
+                    const subPayDate = getScheduledPaymentDate(nextMonthStrForInitial, closing, payment, offset);
+
+                    const nextDateParts = nextPayDate.split('/');
+                    const subDateParts = subPayDate.split('/');
+                    const nextLabel = nextDateParts.length === 3 ? `${parseInt(nextDateParts[1])}/${parseInt(nextDateParts[2])}` : '次回';
+                    const subLabel = subDateParts.length === 3 ? `${parseInt(subDateParts[1])}/${parseInt(subDateParts[2])}` : '次々回';
+
+                    const nextLabelSpan = item.querySelector('.next-payment-label');
+                    const subLabelSpan = item.querySelector('.subsequent-payment-label');
+                    if (nextLabelSpan) nextLabelSpan.textContent = nextLabel;
+                    if (subLabelSpan) subLabelSpan.textContent = subLabel;
+                };
+
+                closingSel.addEventListener('change', updateLabels);
+                paymentSel.addEventListener('change', updateLabels);
+            }
         });
 
         // 固定費登録フォームの支払手段選択肢を更新
         if (fixedCard) {
             fixedCard.innerHTML = '';
+            const optCash = document.createElement('option');
+            optCash.value = 'cash';
+            optCash.textContent = '💰 現金・電子マネー支払い';
+            fixedCard.appendChild(optCash);
+
             ownedCards.forEach(oc => {
                 const preset = baseCardPresets.find(p => p.id === oc.id);
-                if (preset) {
-                    fixedCard.insertAdjacentHTML('beforeend', `<option value="${preset.id}">${preset.name}</option>`);
+                if (preset && preset.id !== 'cash') {
+                    fixedCard.insertAdjacentHTML('beforeend', `<option value="${preset.id}">💳 ${preset.name}</option>`);
                 }
             });
         }
@@ -848,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateFixedConsolidation() {
         if (!fixedConsolidationBox || !fixedConsolidationText) return;
         
-        if (fixedExpenses.length === 0 || ownedCards.length === 0) {
+        if (fixedExpenses.length === 0 || ownedCards.filter(oc => oc.id !== 'cash').length === 0) {
             fixedConsolidationBox.classList.add('hidden');
             return;
         }
@@ -1369,6 +1658,46 @@ document.addEventListener('DOMContentLoaded', () => {
         // 将来の引き落としスケジュールを集計するオブジェクト
         const futurePayments = {}; // { payDateStr: { amount, cards: { cardName: amount } } }
 
+        // 各カードの初期支払額（次回・次々回請求確定額）を futurePayments と cardDebts にマージ
+        const todayObjForInitial = new Date();
+        const todayStrForInitial = `${todayObjForInitial.getFullYear()}/${String(todayObjForInitial.getMonth() + 1).padStart(2, '0')}/${String(todayObjForInitial.getDate()).padStart(2, '0')}`;
+        const nextMonthDateForInitial = new Date(todayObjForInitial.getFullYear(), todayObjForInitial.getMonth() + 1, todayObjForInitial.getDate());
+        const nextMonthStrForInitial = `${nextMonthDateForInitial.getFullYear()}/${String(nextMonthDateForInitial.getMonth() + 1).padStart(2, '0')}/${String(nextMonthDateForInitial.getDate()).padStart(2, '0')}`;
+
+        ownedCards.forEach(oc => {
+            const preset = baseCardPresets.find(p => p.id === oc.id);
+            if (!preset || preset.id === 'cash' || preset.group === '電子マネー・現金') return;
+
+            const closing = oc.closingDay !== undefined ? oc.closingDay : 15;
+            const payment = oc.paymentDay !== undefined ? oc.paymentDay : 10;
+            const offset = oc.paymentMonthOffset !== undefined ? oc.paymentMonthOffset : 1;
+
+            const nextPayDate = getScheduledPaymentDate(todayStrForInitial, closing, payment, offset);
+            const subPayDate = getScheduledPaymentDate(nextMonthStrForInitial, closing, payment, offset);
+
+            // 次回請求確定額のマージ
+            const nextAmt = parseInt(oc.initialNextPayment) || 0;
+            if (nextAmt > 0) {
+                cardDebts[oc.id] = (cardDebts[oc.id] || 0) + nextAmt;
+                if (!futurePayments[nextPayDate]) {
+                    futurePayments[nextPayDate] = { amount: 0, cards: {} };
+                }
+                futurePayments[nextPayDate].amount += nextAmt;
+                futurePayments[nextPayDate].cards[preset.name] = (futurePayments[nextPayDate].cards[preset.name] || 0) + nextAmt;
+            }
+
+            // 次々回請求確定額のマージ
+            const subAmt = parseInt(oc.initialSubsequentPayment) || 0;
+            if (subAmt > 0) {
+                cardDebts[oc.id] = (cardDebts[oc.id] || 0) + subAmt;
+                if (!futurePayments[subPayDate]) {
+                    futurePayments[subPayDate] = { amount: 0, cards: {} };
+                }
+                futurePayments[subPayDate].amount += subAmt;
+                futurePayments[subPayDate].cards[preset.name] = (futurePayments[subPayDate].cards[preset.name] || 0) + subAmt;
+            }
+        });
+
         expenseHistory.forEach(record => {
             const preset = baseCardPresets.find(p => p.name === record.cardName);
             if (preset) {
@@ -1457,13 +1786,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // グローバルな状態を更新（カレンダー描画に引き継ぐため）
         scheduledPaymentDates = futurePayments;
 
-        // 2. 「現金・電子マネー」の合計額を計算
+        // 2. 「現金・預金・電子マネー」の合計額を計算
         let totalCashAssets = 0;
         ownedCards.forEach(oc => {
             const preset = baseCardPresets.find(p => p.id === oc.id);
             if (preset && (preset.id === 'cash' || preset.group === '電子マネー・現金')) {
                 totalCashAssets += (cashAndPrepaidBalances[oc.id] || 0);
             }
+        });
+        // 銀行口座の残高を加算
+        ownedBanks.forEach(ob => {
+            totalCashAssets += (ob.balance || 0);
         });
 
         // 3. 「カード未払金」の合計額を計算
@@ -1543,15 +1876,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const currentRealCash = cashVal - cashExpenses;
 
-        const realAvailableCashVal = currentRealCash - nextPaymentAmount;
+        // 銀行口座の残高の合計額を計算
+        const totalBankBalance = ownedBanks.reduce((sum, b) => sum + (b.balance || 0), 0);
+
+        // 実質余裕資金は、手持ち現金＋銀行口座合計から次のカード支払額を引いたものにする
+        const realAvailableCashVal = (currentRealCash + totalBankBalance) - nextPaymentAmount;
         
         const realAvailableCashEl = document.getElementById('real-available-cash');
         const cashOnHandEl = document.getElementById('cash-on-hand');
+        const bankOnHandEl = document.getElementById('bank-on-hand');
         const nextPaymentAmountEl = document.getElementById('next-payment-amount');
         const nextPaymentDateEl = document.getElementById('next-payment-date');
         
         if (realAvailableCashEl) realAvailableCashEl.textContent = `¥${Math.floor(realAvailableCashVal).toLocaleString()}`;
         if (cashOnHandEl) cashOnHandEl.textContent = `¥${Math.floor(currentRealCash).toLocaleString()}`;
+        if (bankOnHandEl) bankOnHandEl.textContent = `¥${Math.floor(totalBankBalance).toLocaleString()}`;
         if (nextPaymentAmountEl) nextPaymentAmountEl.textContent = `¥${Math.floor(nextPaymentAmount).toLocaleString()}`;
         if (nextPaymentDateEl) {
             if (nextPaymentDateStr) {
@@ -1560,6 +1899,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 nextPaymentDateEl.textContent = `${nextPayMonth}/${payDay}払い`;
             } else {
                 nextPaymentDateEl.textContent = '--/--';
+            }
+        }
+
+        // 6.5 直近引き落とし日における口座残高不足チェック
+        const alertContainer = document.getElementById('bank-deficit-alert-container');
+        const alertTextEl = document.getElementById('bank-deficit-alert-text');
+        
+        if (alertContainer && alertTextEl) {
+            let deficitMessages = [];
+            
+            if (nextPaymentDateStr && futurePayments[nextPaymentDateStr]) {
+                const payDetails = futurePayments[nextPaymentDateStr];
+                const bankDebtsMap = {}; // { bankId: amount }
+                let cashDebtAmount = 0;
+                
+                Object.entries(payDetails.cards).forEach(([cardName, amount]) => {
+                    const preset = baseCardPresets.find(p => p.name === cardName);
+                    if (preset) {
+                        const oc = ownedCards.find(c => c.id === preset.id);
+                        const bankId = oc ? oc.withdrawalBankId : '';
+                        if (bankId) {
+                            bankDebtsMap[bankId] = (bankDebtsMap[bankId] || 0) + amount;
+                        } else {
+                            cashDebtAmount += amount;
+                        }
+                    }
+                });
+                
+                // 各銀行の残高不足チェック
+                Object.entries(bankDebtsMap).forEach(([bankId, amount]) => {
+                    const bank = ownedBanks.find(b => b.id === bankId);
+                    const bankPreset = baseBankPresets.find(b => b.id === bankId);
+                    const bankName = bankPreset ? bankPreset.name : '登録銀行';
+                    const currentBalance = bank ? (bank.balance || 0) : 0;
+                    
+                    if (currentBalance < amount) {
+                        const shortage = amount - currentBalance;
+                        deficitMessages.push(`🏦 <strong>${bankName}</strong> の残高が不足しています（予定額: ¥${amount.toLocaleString()} / 残高: ¥${currentBalance.toLocaleString()} / 不足額: ¥${shortage.toLocaleString()}）`);
+                    }
+                });
+                
+                // 手持ち現金の不足チェック
+                if (cashDebtAmount > 0 && currentRealCash < cashDebtAmount) {
+                    const shortage = cashDebtAmount - currentRealCash;
+                    deficitMessages.push(`💰 <strong>手持ち現金</strong> が不足しています（引き落とし予定額: ¥${cashDebtAmount.toLocaleString()} / 残高: ¥${Math.floor(currentRealCash).toLocaleString()} / 不足額: ¥${Math.floor(shortage).toLocaleString()}）`);
+                }
+            }
+            
+            if (deficitMessages.length > 0) {
+                alertTextEl.innerHTML = deficitMessages.join('<br>');
+                alertContainer.style.display = 'flex';
+            } else {
+                alertContainer.style.display = 'none';
             }
         }
 
@@ -2727,7 +3119,46 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentRealCash = cashOnHand - cashExpenses - fixedExpensesCash;
         
         // 直近のカード引き落とし予定
-        const futurePayments = {};
+        const futurePayments = {}; // { payDate: { amount: 0, cards: { cardId: amount } } }
+
+        // 各カードの初期支払額（次回・次々回請求確定額）を futurePayments にマージ
+        const todayObjForInitial = new Date();
+        const todayStrForInitial = `${todayObjForInitial.getFullYear()}/${String(todayObjForInitial.getMonth() + 1).padStart(2, '0')}/${String(todayObjForInitial.getDate()).padStart(2, '0')}`;
+        const nextMonthDateForInitial = new Date(todayObjForInitial.getFullYear(), todayObjForInitial.getMonth() + 1, todayObjForInitial.getDate());
+        const nextMonthStrForInitial = `${nextMonthDateForInitial.getFullYear()}/${String(nextMonthDateForInitial.getMonth() + 1).padStart(2, '0')}/${String(nextMonthDateForInitial.getDate()).padStart(2, '0')}`;
+
+        ownedCards.forEach(oc => {
+            const preset = baseCardPresets.find(p => p.id === oc.id);
+            if (!preset || preset.id === 'cash' || preset.group === '電子マネー・現金') return;
+
+            const closing = oc.closingDay !== undefined ? oc.closingDay : 15;
+            const payment = oc.paymentDay !== undefined ? oc.paymentDay : 10;
+            const offset = oc.paymentMonthOffset !== undefined ? oc.paymentMonthOffset : 1;
+
+            const nextPayDate = getScheduledPaymentDate(todayStrForInitial, closing, payment, offset);
+            const subPayDate = getScheduledPaymentDate(nextMonthStrForInitial, closing, payment, offset);
+
+            // 次回請求確定額のマージ
+            const nextAmt = parseInt(oc.initialNextPayment) || 0;
+            if (nextAmt > 0) {
+                if (!futurePayments[nextPayDate]) {
+                    futurePayments[nextPayDate] = { amount: 0, cards: {} };
+                }
+                futurePayments[nextPayDate].amount += nextAmt;
+                futurePayments[nextPayDate].cards[preset.id] = (futurePayments[nextPayDate].cards[preset.id] || 0) + nextAmt;
+            }
+
+            // 次々回請求確定額のマージ
+            const subAmt = parseInt(oc.initialSubsequentPayment) || 0;
+            if (subAmt > 0) {
+                if (!futurePayments[subPayDate]) {
+                    futurePayments[subPayDate] = { amount: 0, cards: {} };
+                }
+                futurePayments[subPayDate].amount += subAmt;
+                futurePayments[subPayDate].cards[preset.id] = (futurePayments[subPayDate].cards[preset.id] || 0) + subAmt;
+            }
+        });
+
         expenseHistory.forEach(record => {
             const preset = baseCardPresets.find(p => p.name === record.cardName);
             if (preset && preset.group !== '電子マネー・現金' && preset.id !== 'cash' && !record.cleared) {
@@ -2736,7 +3167,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const payment = (oc && oc.paymentDay !== undefined) ? oc.paymentDay : 10;
                 const offset = (oc && oc.paymentMonthOffset !== undefined) ? oc.paymentMonthOffset : 1;
                 const payDate = getScheduledPaymentDate(record.date, closing, payment, offset);
-                futurePayments[payDate] = (futurePayments[payDate] || 0) + record.amount;
+                
+                if (!futurePayments[payDate]) {
+                    futurePayments[payDate] = { amount: 0, cards: {} };
+                }
+                futurePayments[payDate].amount += record.amount;
+                futurePayments[payDate].cards[preset.id] = (futurePayments[payDate].cards[preset.id] || 0) + record.amount;
             }
         });
         fixedExpenses.forEach(exp => {
@@ -2752,25 +3188,86 @@ document.addEventListener('DOMContentLoaded', () => {
                 const payment = (oc && oc.paymentDay !== undefined) ? oc.paymentDay : 10;
                 const offset = (oc && oc.paymentMonthOffset !== undefined) ? oc.paymentMonthOffset : 1;
                 const payDate = getScheduledPaymentDate(expDateStr, closing, payment, offset);
-                futurePayments[payDate] = (futurePayments[payDate] || 0) + exp.amount;
+                
+                if (!futurePayments[payDate]) {
+                    futurePayments[payDate] = { amount: 0, cards: {} };
+                }
+                futurePayments[payDate].amount += exp.amount;
+                futurePayments[payDate].cards[preset.id] = (futurePayments[payDate].cards[preset.id] || 0) + exp.amount;
             }
         });
 
         const sortedPayDates = Object.keys(futurePayments).sort();
-        const nextPaymentAmount = sortedPayDates.length > 0 ? futurePayments[sortedPayDates[0]] : 0;
         const nextPaymentDateStr = sortedPayDates.length > 0 ? sortedPayDates[0] : null;
-        const realAvailableCashVal = currentRealCash - nextPaymentAmount;
+        const nextPaymentAmount = nextPaymentDateStr ? futurePayments[nextPaymentDateStr].amount : 0;
+
+        // 銀行ごとの残高不足チェック
+        let bankDeficitFound = false;
+        if (nextPaymentDateStr && futurePayments[nextPaymentDateStr]) {
+            const payDetails = futurePayments[nextPaymentDateStr];
+            const bankDebtsMap = {}; // { bankId: amount }
+            let cashDebtAmount = 0;
+            
+            Object.entries(payDetails.cards).forEach(([cardId, amount]) => {
+                const oc = ownedCards.find(c => c.id === cardId);
+                const bankId = oc ? oc.withdrawalBankId : '';
+                if (bankId) {
+                    bankDebtsMap[bankId] = (bankDebtsMap[bankId] || 0) + amount;
+                } else {
+                    cashDebtAmount += amount;
+                }
+            });
+            
+            // 各銀行の不足を警告
+            Object.entries(bankDebtsMap).forEach(([bankId, amount]) => {
+                const bank = ownedBanks.find(b => b.id === bankId);
+                const bankPreset = baseBankPresets.find(b => b.id === bankId);
+                const bankName = bankPreset ? bankPreset.name : '登録銀行';
+                const currentBalance = bank ? (bank.balance || 0) : 0;
+                
+                if (currentBalance < amount) {
+                    const shortage = amount - currentBalance;
+                    const dateText = `${nextPaymentDateStr.split('/')[1]}/${nextPaymentDateStr.split('/')[2]}払い`;
+                    advices.push({
+                        type: 'danger',
+                        badge: '残高不足警告',
+                        title: `🏦 ${bankName}の口座残高が不足しています！`,
+                        desc: `${dateText}の引き落とし予定額 <strong>¥${amount.toLocaleString()}</strong> に対して、${bankName}の残高が <strong>¥${currentBalance.toLocaleString()}</strong> となっています（<strong>¥${shortage.toLocaleString()} 不足</strong>）。引き落とし日までに入金を行ってください。`,
+                        icon: '🚨'
+                    });
+                    bankDeficitFound = true;
+                }
+            });
+            
+            // 手持ち現金の不足
+            if (cashDebtAmount > 0 && currentRealCash < cashDebtAmount) {
+                const shortage = cashDebtAmount - currentRealCash;
+                const dateText = `${nextPaymentDateStr.split('/')[1]}/${nextPaymentDateStr.split('/')[2]}払い`;
+                advices.push({
+                    type: 'danger',
+                    badge: '残高不足警告',
+                    title: `💰 手持ち現金（引き落とし分）が不足しています！`,
+                    desc: `${dateText}の引き落とし予定額 <strong>¥${cashDebtAmount.toLocaleString()}</strong> に対して、手持ち現金が <strong>¥${Math.floor(currentRealCash).toLocaleString()}</strong> となっています（<strong>¥${Math.floor(shortage).toLocaleString()} 不足</strong>）。`,
+                    icon: '🚨'
+                });
+                bankDeficitFound = true;
+            }
+        }
+
+        // 全体の実質余裕資金を計算（手持ち現金＋銀行口座合計）
+        const totalBankBalance = ownedBanks.reduce((sum, b) => sum + (b.balance || 0), 0);
+        const realAvailableCashVal = (currentRealCash + totalBankBalance) - nextPaymentAmount;
 
         if (realAvailableCashVal < 0) {
             const dateText = nextPaymentDateStr ? `${nextPaymentDateStr.split('/')[1]}/${nextPaymentDateStr.split('/')[2]}払い` : '次回';
             advices.push({
                 type: 'warning',
                 badge: 'キャッシュフロー警告',
-                title: '直近の引き落とし資金が不足するリスクがあります',
-                desc: `直近のカード引き落とし予定額（¥${Math.floor(nextPaymentAmount).toLocaleString()}、${dateText}）に対して、実質余裕資金が <strong>-¥${Math.floor(Math.abs(realAvailableCashVal)).toLocaleString()}</strong> となっています。引き落とし日までに口座残高を確認し、資金を入金するか、新規の支出を一時的に抑えましょう。`,
+                title: '全体の引落予定に対して総現金預金が不足しています',
+                desc: `直近のカード引き落とし予定総額（¥${Math.floor(nextPaymentAmount).toLocaleString()}、${dateText}）に対し、手持ち現金＋銀行口座合計の実質余裕資金が <strong>-¥${Math.floor(Math.abs(realAvailableCashVal)).toLocaleString()}</strong> となっています。引き落とし口座の残高を確認してください。`,
                 icon: '⚠️'
             });
-        } else {
+        } else if (!bankDeficitFound) {
             advices.push({
                 type: 'success',
                 badge: 'キャッシュフロー健全',
@@ -3001,11 +3498,79 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 銀行追加ボタンのイベント
+    if (addBankBtn && bankSelectDropdown) {
+        addBankBtn.addEventListener('click', () => {
+            const val = bankSelectDropdown.value;
+            if (!val) {
+                alert('追加する銀行を選択してください。');
+                return;
+            }
+            const bank = baseBankPresets.find(b => b.id === val);
+            if (!bank) return;
+            
+            const exists = ownedBanks.some(ob => ob.id === val);
+            if (!exists) {
+                ownedBanks.push({
+                    id: val,
+                    balance: 0
+                });
+                initSetup();
+            }
+        });
+    }
+
+    // カード追加ボタンのイベント
+    if (addCardBtn && cardSelectDropdown) {
+        addCardBtn.addEventListener('click', () => {
+            const val = cardSelectDropdown.value;
+            if (!val) {
+                alert('追加するカードを選択してください。');
+                return;
+            }
+            
+            const card = baseCardPresets.find(p => p.id === val);
+            if (!card) return;
+            
+            // すでに登録されていなければ追加
+            const exists = ownedCards.some(oc => oc.id === val);
+            if (!exists) {
+                let defaultClosing = 15;
+                let defaultPayment = 10;
+                
+                if (['rakuten', 'rakuten_gold', 'rakuten_premium', 'paypay', 'paypay_gold', 'aupay', 'aupay_gold'].includes(card.id)) {
+                    defaultClosing = 30; // 月末締め
+                    defaultPayment = 27; // 27日払い
+                } else if (['smcc_nl', 'smcc_gold_nl', 'smcc_platinum_pref', 'olive_normal', 'olive_gold', 'olive_platinum', 'dcard', 'dcard_gold', 'mufg', 'jcb_w', 'jcb_general', 'ana_card', 'ana_visa_gold', 'ana_student'].includes(card.id)) {
+                    defaultClosing = 15; // 15日締め
+                    defaultPayment = 10; // 10日払い
+                } else {
+                    defaultClosing = 30;
+                    defaultPayment = 27;
+                }
+                
+                const defaultRate = ['smcc_nl', 'smcc_gold_nl', 'smcc_platinum_pref', 'olive_normal', 'olive_gold', 'olive_platinum'].includes(card.id) ? 7 : (card.id === 'mufg' ? 19 : null);
+                
+                ownedCards.push({
+                    id: val,
+                    balance: 0,
+                    customRate: defaultRate,
+                    eposShops: [],
+                    closingDay: defaultClosing,
+                    paymentDay: defaultPayment,
+                    paymentMonthOffset: 1
+                });
+                
+                initSetup();
+            }
+        });
+    }
+
     // Initialization
     initSetup();
     initSimulator();
 
-    if (ownedCards.length > 0) {
+    if (ownedCards.filter(oc => oc.id !== 'cash').length > 0) {
         switchView('view-simulator');
     } else {
         switchView('view-setup');

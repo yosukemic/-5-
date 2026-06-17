@@ -497,6 +497,19 @@ body {
 }
 
 @media (max-width: 480px) {
+    /* 全体コンテナの余白調整 */
+    .container {
+        padding: 1rem 0.8rem;
+        gap: 1rem;
+    }
+
+    /* 各パネルのモバイル向けパディング調整 */
+    .glass-panel {
+        padding: 1.2rem 1rem;
+        border-radius: 16px;
+    }
+
+    /* 総資産ダッシュボード */
     .asset-split-grid {
         grid-template-columns: 1fr;
         gap: 0.8rem;
@@ -516,6 +529,126 @@ body {
         gap: 0.5rem;
         align-items: center;
         text-align: center;
+    }
+
+    /* ナビゲーションボタンの文字縮小と余白の最適化 */
+    .nav-btn {
+        font-size: 0.75rem;
+        gap: 0.2rem;
+    }
+    .nav-btn span {
+        font-size: 1.1rem;
+    }
+
+    /* AI財務アドバイザーのモバイル最適化 */
+    .ai-advisor-header {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+        gap: 0.8rem !important;
+    }
+    .ai-advisor-header h3 {
+        justify-content: center;
+    }
+    #ai-analyze-btn {
+        width: 100% !important;
+        justify-content: center;
+        margin-top: 0.2rem;
+    }
+
+    /* AIアドバイスカードのモバイル最適化 */
+    .ai-card {
+        padding: 0.8rem;
+        gap: 0.6rem;
+        border-radius: 12px;
+    }
+    .ai-card-icon {
+        font-size: 1.4rem;
+        padding: 0.4rem;
+        border-radius: 8px;
+    }
+    .ai-card-title {
+        font-size: 0.85rem;
+        line-height: 1.3;
+    }
+    .ai-card-desc {
+        font-size: 0.75rem;
+        line-height: 1.4;
+    }
+    .ai-card-badge {
+        font-size: 0.6rem;
+        padding: 0.15rem 0.4rem;
+    }
+
+    /* 飛行機フライトマップの崩れ防止 */
+    .flight-map-container {
+        height: 52px;
+        padding: 0 1.2rem !important;
+    }
+    .flight-map-container span {
+        font-size: 0.9rem !important;
+    }
+    #flight-dest-name,
+    .flight-map-container span[style*="font-size: 0.55rem"] {
+        font-size: 0.5rem !important;
+    }
+    #flight-jet {
+        font-size: 1.1rem !important;
+    }
+
+    /* カード登録ドロップダウンの縦並び化 */
+    .add-card-container {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+    #card-select-dropdown {
+        width: 100% !important;
+    }
+    #add-card-btn {
+        width: 100% !important;
+        justify-content: center;
+    }
+
+    /* マイル目標のセレクトボックス縦並び化と幅いっぱいの表示 */
+    .mile-goal-section div[style*="display:flex"] {
+        flex-direction: column;
+        gap: 0.4rem !important;
+    }
+    #goal-airline, #goal-destination {
+        width: 100%;
+        text-align: center;
+        padding: 0.5rem;
+    }
+
+    /* 履歴レコードの偏り・重なり防止（縦並び配置） */
+    .record-item {
+        padding: 0.8rem;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+    }
+    .record-item > div[style*="text-align: right"] {
+        text-align: left !important;
+        min-width: unset !important;
+        border-top: 1px dashed var(--glass-border);
+        padding-top: 0.4rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .record-shop {
+        font-size: 0.9rem;
+    }
+    .record-amount {
+        font-size: 1rem;
+    }
+    .record-card {
+        font-size: 0.75rem;
+    }
+
+    /* 統計ビューパネル */
+    #view-stats .glass-panel {
+        padding: 1rem;
     }
 }
 

@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            alert("JS Error: " + message + "\nLine: " + lineno + "\nSource: " + source);
+            return false;
+        };
+    </script>
     <title>ポイ活・マイル計算 シミュレータ</title>
     <meta name="description" content="所持カードの登録、店舗別の還元率シミュレーション、お小遣い帳機能を持つ統合ポイ活ツールです。">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,6 +17,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <div class="background-blobs">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
@@ -20,7 +27,7 @@
     <!-- Navigation -->
     <nav class="main-nav">
         <button class="nav-btn active" data-target="view-setup">
-            <span>💳</span> 所持カード
+            <span>⚙️</span> 初期設定
         </button>
         <button class="nav-btn" data-target="view-simulator">
             <span>🧮</span> 計算
@@ -46,9 +53,53 @@
         <section id="view-setup" class="view-section active">
             <div class="glass-panel">
                 <h2 class="section-title">所持カードの登録</h2>
+
+                <!-- 手持ち現金の登録 -->
+                <div class="cash-input-container" style="background: rgba(255, 255, 255, 0.4); border: 1px solid var(--glass-border); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                    <label for="setup-cash-input" style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-color); margin-bottom: 0.5rem;">
+                        💰 現在の手持ち現金 (お財布など)
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="number" id="setup-cash-input" placeholder="例: 50000" min="0" style="flex: 1; padding: 0.6rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff; color: var(--text-color); font-size: 0.9rem; outline: none;" value="0">
+                        <span style="font-size: 0.9rem; font-weight: bold; color: var(--text-color);">円</span>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.3rem 0 0 0;">
+                        ※ お財布の中などにある、手持ちの現金の総額を入力してください。
+                    </p>
+                </div>
+
+                <!-- 銀行口座の登録 -->
+                <div class="bank-input-container" style="background: rgba(255, 255, 255, 0.4); border: 1px solid var(--glass-border); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-color); margin-bottom: 0.5rem;">
+                        🏦 銀行口座の登録
+                    </label>
+                    <div class="add-bank-container" style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+                        <select id="bank-select-dropdown" style="flex:1; min-width:200px; padding:0.6rem; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color); font-size:0.9rem; cursor:pointer; outline:none;">
+                            <!-- JSで動的に追加可能銀行を挿入 -->
+                        </select>
+                        <button id="add-bank-btn" class="submit-btn" style="width:auto; padding:0.6rem 1.2rem; font-size:0.9rem; margin:0; display:flex; align-items:center; gap:0.3rem;">
+                            <span>＋</span> 口座を追加
+                        </button>
+                    </div>
+                    <div id="bank-checklist" class="bank-checklist" style="display: flex; flex-direction: column; gap: 0.8rem;">
+                        <!-- Javascriptで動的に生成 -->
+                    </div>
+                </div>
+                
+                <!-- カードのドロップダウン選択と追加ボタン -->
+                <div class="add-card-container" style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+                    <select id="card-select-dropdown" style="flex:1; min-width:200px; padding:0.6rem; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:var(--text-color); font-size:0.9rem; cursor:pointer; outline:none;">
+                        <!-- JSで動的に追加可能カードを挿入 -->
+                    </select>
+                    <button id="add-card-btn" class="submit-btn" style="width:auto; padding:0.6rem 1.2rem; font-size:0.9rem; margin:0; display:flex; align-items:center; gap:0.3rem;">
+                        <span>＋</span> カードを追加
+                    </button>
+                </div>
+
                 <div id="card-checklist" class="card-checklist">
                     <!-- Javascriptで動的に生成 -->
                 </div>
+                
                 <button id="save-cards-btn" class="submit-btn mt-4">保存してシミュレータへ</button>
                 <button id="reset-data-btn" class="record-btn" style="color:#ef4444; border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.1); margin-top:1rem;">アプリのデータをすべてリセット</button>
             </div>
@@ -187,7 +238,7 @@
                     
                     <div class="asset-split-grid">
                         <div>
-                            <div style="color:#34d399; font-weight:bold;">💰 現金・電子マネー</div>
+                            <div style="color:#34d399; font-weight:bold;">💰 現金・預金・電子マネー</div>
                             <div id="total-cash-assets" style="font-size:1.1rem; font-weight:700; color:var(--text-color); margin-top:0.2rem;">¥0</div>
                         </div>
                         <div>
@@ -202,12 +253,19 @@
                         </div>
                     </div>
 
+                    <!-- 残高不足警告エリア -->
+                    <div id="bank-deficit-alert-container" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 0.8rem 1rem; margin-top: 1rem; display: none; align-items: center; gap: 0.8rem; color: #ef4444; font-size: 0.85rem; text-align: left; font-weight: bold;">
+                        <span style="font-size: 1.5rem;">⚠️</span>
+                        <div id="bank-deficit-alert-text" style="flex: 1; line-height: 1.4;"></div>
+                    </div>
+
                     <!-- 実質余裕資金 & 直近引き落とし予定 -->
                     <div style="background:rgba(79,70,229,0.04); border:1px solid rgba(79,70,229,0.12); border-radius:12px; padding:1rem; margin-top:1rem; text-align:center;">
                         <div style="font-size:0.8rem; color:var(--text-muted); font-weight:bold; margin-bottom:0.3rem;">💡 今自由に使える「実質余裕資金」</div>
                         <div id="real-available-cash" style="font-size:1.8rem; font-weight:800; color:var(--accent-primary);">¥0</div>
                         <div class="real-cash-details">
                             <span>💰 所持現金: <strong id="cash-on-hand" style="color:var(--text-color);">¥0</strong></span>
+                            <span>🏦 銀行預金: <strong id="bank-on-hand" style="color:var(--text-color);">¥0</strong></span>
                             <span>💳 直近引き落とし予定: <strong id="next-payment-amount" style="color:#ef4444;">¥0</strong> (<span id="next-payment-date" style="font-weight:bold;">--/--</span>)</span>
                         </div>
                     </div>
@@ -637,6 +695,6 @@
 
     <!-- Tesseract.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=1.5"></script>
 </body>
 </html>
