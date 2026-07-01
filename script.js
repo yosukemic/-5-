@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             applyBonus: function(shop, custom) {
                 if (['smcc_target', 'smcc_mufg_target'].includes(shop.category)) {
                     const rate = (custom && custom.customRate) ? custom.customRate : 7.0;
-                    this.unitPoints = this.unitAmount * (rate / 100);
+                    this.unitPoints = Math.round(this.unitAmount * (rate / 100) * 10000) / 10000;
                     this.label = `200円/${this.unitPoints}pt (スマホタッチ決済等 ${rate}%)`;
                 } else { this.unitPoints = 1; this.label = '200円/1pt (基本0.5%)'; }
             }
@@ -242,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
             applyBonus: function(shop, custom) {
                 if (['smcc_target', 'smcc_mufg_target'].includes(shop.category)) {
                     const rate = (custom && custom.customRate) ? custom.customRate : 7.0;
-                    this.unitPoints = this.unitAmount * (rate / 100);
+                    this.unitPoints = Math.round(this.unitAmount * (rate / 100) * 10000) / 10000;
                     this.label = `200円/${this.unitPoints}pt (スマホタッチ決済等 ${rate}%)`;
                 } else { this.unitPoints = 1; this.label = '200円/1pt (基本0.5%)'; }
             }
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             applyBonus: function(shop, custom) {
                 if (['smcc_target', 'smcc_mufg_target'].includes(shop.category)) {
                     const rate = (custom && custom.customRate) ? custom.customRate : 7.0;
-                    this.unitPoints = this.unitAmount * (rate / 100);
+                    this.unitPoints = Math.round(this.unitAmount * (rate / 100) * 10000) / 10000;
                     this.label = `100円/${this.unitPoints}pt (スマホタッチ決済等 ${rate}%)`;
                 } else { this.unitPoints = 1; this.label = '100円/1pt (基本1.0%)'; }
             }
@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
             applyBonus: function(shop, custom) {
                 if (['smcc_target', 'smcc_mufg_target'].includes(shop.category)) {
                     const rate = (custom && custom.customRate) ? custom.customRate : 7.0;
-                    this.unitPoints = this.unitAmount * (rate / 100);
+                    this.unitPoints = Math.round(this.unitAmount * (rate / 100) * 10000) / 10000;
                     this.label = `200円/${this.unitPoints}pt (Vポイントアップ ${rate}%)`;
                 } else { this.unitPoints = 1; this.label = '200円/1pt (基本0.5%)'; }
             }
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
             applyBonus: function(shop, custom) {
                 if (['smcc_target', 'smcc_mufg_target'].includes(shop.category)) {
                     const rate = (custom && custom.customRate) ? custom.customRate : 7.0;
-                    this.unitPoints = this.unitAmount * (rate / 100);
+                    this.unitPoints = Math.round(this.unitAmount * (rate / 100) * 10000) / 10000;
                     this.label = `200円/${this.unitPoints}pt (Vポイントアップ ${rate}%)`;
                 } else { this.unitPoints = 1; this.label = '200円/1pt (基本0.5%)'; }
             }
@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
             applyBonus: function(shop, custom) {
                 if (['smcc_target', 'smcc_mufg_target'].includes(shop.category)) {
                     const rate = (custom && custom.customRate) ? custom.customRate : 7.0;
-                    this.unitPoints = this.unitAmount * (rate / 100);
+                    this.unitPoints = Math.round(this.unitAmount * (rate / 100) * 10000) / 10000;
                     this.label = `100円/${this.unitPoints}pt (Vポイントアップ ${rate}%)`;
                 } else { this.unitPoints = 1; this.label = '100円/1pt (基本1.0%)'; }
             }
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             applyBonus: function(shop, custom) {
                 if (['mufg_target', 'smcc_mufg_target'].includes(shop.category)) {
                     const rate = (custom && custom.customRate) ? custom.customRate : 19.0;
-                    this.unitPoints = this.unitAmount * (rate / 100);
+                    this.unitPoints = Math.round(this.unitAmount * (rate / 100) * 10000) / 10000;
                     this.label = `200円/${this.unitPoints}pt (対象店舗 最大${rate}%)`;
                 } else { this.unitPoints = 1; this.label = '200円/1pt (基本0.5%)'; }
             }
@@ -1265,6 +1265,302 @@ document.addEventListener('DOMContentLoaded', () => {
                 shopSuggestions.classList.add('hidden');
             }
         });
+
+        // --- GPS周辺店舗自動取得機能 ---
+        const gpsShopBtn = document.getElementById('gps-shop-btn');
+        const gpsShopsContainer = document.getElementById('gps-shops-container');
+        const gpsStatusText = document.getElementById('gps-status-text');
+        const gpsShopList = document.getElementById('gps-shop-list');
+
+        if (gpsShopBtn && gpsShopsContainer && gpsStatusText && gpsShopList) {
+            gpsShopBtn.addEventListener('click', () => {
+                // コンテナを表示し、ステータスを初期化
+                gpsShopsContainer.classList.remove('hidden');
+                gpsStatusText.innerHTML = `
+                    <span class="gps-spinner" style="border:2px solid rgba(14,165,233,0.1); border-left-color:#0ea5e9; border-radius:50%; width:12px; height:12px; display:inline-block; animation:spin 1s linear infinite;"></span>
+                    <span>位置情報を取得中...</span>
+                `;
+                gpsShopList.innerHTML = '';
+
+                if (!navigator.geolocation) {
+                    showGpsError('お使いのブラウザはGPS（位置情報）に対応していません。');
+                    return;
+                }
+
+                const options = {
+                    enableHighAccuracy: true,
+                    timeout: 6000,
+                    maximumAge: 0
+                };
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        displayNearbyShops(lat, lon);
+                    },
+                    (error) => {
+                        console.warn('GPS Error:', error);
+                        // テストしやすくするために、失敗しても疑似ロケーションでの選択リンクを提示する
+                        showGpsFallback('位置情報を取得できませんでした。テスト用に以下の地点から選択して周辺店舗を表示できます：');
+                    },
+                    options
+                );
+            });
+
+            function showGpsError(msg) {
+                gpsStatusText.innerHTML = `
+                    <span style="color:#ef4444;">⚠️</span>
+                    <span style="color:#ef4444;">${msg}</span>
+                `;
+            }
+
+            function showGpsFallback(msg) {
+                gpsStatusText.innerHTML = `
+                    <div style="color:#f59e0b; margin-bottom:0.4rem;">⚠️ ${msg}</div>
+                `;
+                
+                // 擬似地点の選択肢を追加
+                const mockCitBtn = document.createElement('button');
+                mockCitBtn.type = 'button';
+                mockCitBtn.className = 'record-btn';
+                mockCitBtn.style.padding = '0.3rem 0.6rem';
+                mockCitBtn.style.fontSize = '0.75rem';
+                mockCitBtn.style.margin = '0 0.4rem 0 0';
+                mockCitBtn.style.background = 'rgba(14,165,233,0.08)';
+                mockCitBtn.style.borderColor = 'rgba(14,165,233,0.3)';
+                mockCitBtn.style.color = '#0ea5e9';
+                mockCitBtn.innerHTML = '📍 千葉工業大学周辺として検索';
+                mockCitBtn.addEventListener('click', () => {
+                    displayNearbyShops(35.6896, 140.0204);
+                });
+
+                const mockTokyoBtn = document.createElement('button');
+                mockTokyoBtn.type = 'button';
+                mockTokyoBtn.className = 'record-btn';
+                mockTokyoBtn.style.padding = '0.3rem 0.6rem';
+                mockTokyoBtn.style.fontSize = '0.75rem';
+                mockTokyoBtn.style.margin = '0';
+                mockTokyoBtn.style.background = 'rgba(14,165,233,0.08)';
+                mockTokyoBtn.style.borderColor = 'rgba(14,165,233,0.3)';
+                mockTokyoBtn.style.color = '#0ea5e9';
+                mockTokyoBtn.innerHTML = '📍 東京駅周辺として検索';
+                mockTokyoBtn.addEventListener('click', () => {
+                    displayNearbyShops(35.6812, 139.7671);
+                });
+
+                const btnWrapper = document.createElement('div');
+                btnWrapper.style.display = 'flex';
+                btnWrapper.style.marginTop = '0.3rem';
+                btnWrapper.appendChild(mockCitBtn);
+                btnWrapper.appendChild(mockTokyoBtn);
+                gpsStatusText.appendChild(btnWrapper);
+            }
+
+            function getDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371000;
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                          Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            }
+
+            function displayNearbyShops(lat, lon) {
+                const distToCit = getDistance(lat, lon, 35.6896, 140.0204);
+                const distToTokyo = getDistance(lat, lon, 35.6812, 139.7671);
+
+                if (distToCit < 1000) {
+                    renderShopList('千葉工業大学 津田沼キャンパス周辺', [
+                        { name: 'ファミリーマート 千葉工大前店', shopId: 'familymart', distance: 15 },
+                        { name: 'セブン-イレブン 津田沼駅南口店', shopId: 'seven', distance: 45 },
+                        { name: 'ガスト 津田沼駅前店', shopId: 'gusto', distance: 110 },
+                        { name: 'マクドナルド 津田沼駅前店', shopId: 'mac', distance: 130 },
+                        { name: 'マツモトキヨシ 津田沼駅ビル店', shopId: 'matsukiyo', distance: 180 }
+                    ]);
+                } else if (distToTokyo < 1000) {
+                    renderShopList('東京駅周辺', [
+                        { name: 'スターバックスコーヒー JR東京駅日本橋口店', shopId: 'starbucks', distance: 30 },
+                        { name: 'ローソン 丸の内一丁目店', shopId: 'lawson', distance: 80 },
+                        { name: '大丸東京店 (イオン等)', shopId: 'aeon', distance: 140 },
+                        { name: 'マクドナルド JR東京駅店', shopId: 'mac', distance: 220 },
+                        { name: 'ウエルシア 八重洲地下街店', shopId: 'welcia', distance: 310 }
+                    ]);
+                } else {
+                    // 一般フォールバック地域の場合は、Overpass APIでリアル店舗を検索
+                    gpsStatusText.innerHTML = `
+                        <span class="gps-spinner" style="border:2px solid rgba(14,165,233,0.1); border-left-color:#0ea5e9; border-radius:50%; width:12px; height:12px; display:inline-block; animation:spin 1s linear infinite;"></span>
+                        <span>周辺の実店舗を検索中...</span>
+                    `;
+
+                    const query = `[out:json][timeout:10];(node["shop"="convenience"](around:1000,${lat},${lon});node["amenity"="fast_food"](around:1000,${lat},${lon});node["amenity"="cafe"](around:1000,${lat},${lon});node["shop"="supermarket"](around:1000,${lat},${lon}););out body 12;`;
+                    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+
+                    fetch(url)
+                        .then(res => {
+                            if (!res.ok) throw new Error('API response error');
+                            return res.json();
+                        })
+                        .then(data => {
+                            if (data && data.elements && data.elements.length > 0) {
+                                const fetchedShops = [];
+                                data.elements.forEach(el => {
+                                    const name = el.tags && (el.tags.name || el.tags.brand || el.tags.operator);
+                                    if (name) {
+                                        const dist = Math.round(getDistance(lat, lon, el.lat, el.lon));
+                                        const shopId = findPresetShopId(name);
+                                        fetchedShops.push({ name, shopId, distance: dist });
+                                    }
+                                });
+
+                                // 距離順にソートして重複を排除
+                                fetchedShops.sort((a, b) => a.distance - b.distance);
+                                const uniqueShops = [];
+                                const seenNames = new Set();
+                                fetchedShops.forEach(s => {
+                                    if (!seenNames.has(s.name)) {
+                                        seenNames.add(s.name);
+                                        uniqueShops.push(s);
+                                    }
+                                });
+
+                                const finalShops = uniqueShops.slice(0, 6); // 上位6件を表示
+
+                                if (finalShops.length > 0) {
+                                    renderShopList(`現在地付近 (${lat.toFixed(3)}, ${lon.toFixed(3)})`, finalShops);
+                                    return;
+                                }
+                            }
+                            throw new Error('No shops found');
+                        })
+                        .catch(err => {
+                            console.warn('Overpass API error, falling back to mock shops:', err);
+                            // APIエラーや店舗がゼロの場合はダミーを表示
+                            renderShopList(`現在地付近 (デモモード)`, [
+                                { name: 'セブン-イレブン 近郊店', shopId: 'seven', distance: 50 },
+                                { name: 'ファミリーマート 近郊店', shopId: 'familymart', distance: 120 },
+                                { name: 'ローソン 近郊店', shopId: 'lawson', distance: 190 },
+                                { name: 'マクドナルド 近郊店', shopId: 'mac', distance: 250 },
+                                { name: 'スギ薬局 (マツモトキヨシ等)', shopId: 'matsukiyo', distance: 320 }
+                            ]);
+                        });
+                }
+            }
+
+            function findPresetShopId(name) {
+                const n = name.toLowerCase();
+                if (n.includes('セブン')) return 'seven';
+                if (n.includes('ローソン')) return 'lawson';
+                if (n.includes('ファミリーマート') || n.includes('ファミマ')) return 'familymart';
+                if (n.includes('セイコーマート')) return 'seicomart';
+                if (n.includes('マクドナルド') || n.includes('マック')) return 'mac';
+                if (n.includes('サイゼリヤ') || n.includes('サイゼ')) return 'saizeriya';
+                if (n.includes('すき家')) return 'sukiya';
+                if (n.includes('松屋')) return 'matsuya';
+                if (n.includes('吉野家')) return 'yoshinoya';
+                if (n.includes('ドトール')) return 'doutor';
+                if (n.includes('スターバックス') || n.includes('スタバ')) return 'starbucks';
+                if (n.includes('マツモトキヨシ') || n.includes('マツキヨ')) return 'matsukiyo';
+                if (n.includes('ウエルシア')) return 'welcia';
+                if (n.includes('イオン')) return 'aeon';
+                if (n.includes('ダイエー')) return 'daiei';
+                if (n.includes('マックスバリュ')) return 'maxvalu';
+                if (n.includes('ガスト')) return 'gusto';
+                if (n.includes('ココス')) return 'cocos';
+                if (n.includes('はま寿司')) return 'hama_sushi';
+                if (n.includes('スシロー')) return 'sushiro';
+                if (n.includes('くら寿司')) return 'kura_sushi';
+                if (n.includes('モスバーガー') || n.includes('モス')) return 'mos_burger';
+                return 'normal';
+            }
+
+            function renderShopList(locationName, shopData) {
+                gpsStatusText.innerHTML = `
+                    <span style="color:#0ea5e9;">📍</span>
+                    <span>${locationName}の周辺店舗（距離順）：</span>
+                `;
+
+                gpsShopList.innerHTML = '';
+                shopData.forEach(item => {
+                    const shopItem = document.createElement('button');
+                    shopItem.type = 'button';
+                    shopItem.className = 'record-btn';
+                    shopItem.style.display = 'flex';
+                    shopItem.style.justifyContent = 'space-between';
+                    shopItem.style.alignItems = 'center';
+                    shopItem.style.padding = '0.4rem 0.8rem';
+                    shopItem.style.borderRadius = '8px';
+                    shopItem.style.cursor = 'pointer';
+                    shopItem.style.background = 'rgba(255,255,255,0.7)';
+                    shopItem.style.border = '1px solid rgba(0,0,0,0.05)';
+                    shopItem.style.margin = '0';
+                    shopItem.style.width = '100%';
+                    shopItem.style.textAlign = 'left';
+
+                    const preset = shops.find(s => s.id === item.shopId);
+                    const categoryEmoji = preset ? (
+                        preset.storeCategory === '食費' ? '🍔' :
+                        preset.storeCategory === '日用品' ? '🧼' :
+                        preset.storeCategory === '交通費' ? '🚃' : '📦'
+                    ) : '🛍️';
+
+                    shopItem.innerHTML = `
+                        <div style="font-weight:bold; color:var(--text-color); font-size:0.85rem;">
+                            <span>${categoryEmoji}</span> ${item.name}
+                        </div>
+                        <div style="font-size:0.7rem; color:var(--text-muted); font-weight:bold;">
+                            約 ${item.distance}m
+                        </div>
+                    `;
+
+                    shopItem.addEventListener('click', () => {
+                        shopSearch.value = item.name;
+                        
+                        if (preset) {
+                            selectedShop = preset;
+                            if (shopCategory) shopCategory.value = preset.storeCategory;
+                        } else {
+                            // プリセットがない場合はカスタム店舗としてセット
+                            selectedShop = { id: 'gps_' + item.shopId, name: item.name, category: 'normal', isOnline: false };
+                            if (shopCategory) {
+                                // カテゴリを適当に予測
+                                const nameLower = item.name.toLowerCase();
+                                if (nameLower.includes('スーパー') || nameLower.includes('マート') || nameLower.includes('ストア') || nameLower.includes('フード')) {
+                                    shopCategory.value = '食費';
+                                } else if (nameLower.includes('ドラッグ') || nameLower.includes('薬局') || nameLower.includes('ケア')) {
+                                    shopCategory.value = '日用品';
+                                } else {
+                                    shopCategory.value = 'その他';
+                                }
+                            }
+                        }
+
+                        // 自動で一番お得なポイントカードがあれば提示（選択）
+                        const pointCardSelect = document.getElementById('point-card');
+                        if (pointCardSelect) {
+                            if (item.shopId === 'seven') {
+                                pointCardSelect.value = 'none';
+                            } else if (item.shopId === 'lawson') {
+                                pointCardSelect.value = 'ponta_05';
+                            } else if (item.shopId === 'familymart') {
+                                pointCardSelect.value = 'dpoint_05';
+                            } else if (item.shopId === 'starbucks') {
+                                pointCardSelect.value = 'none';
+                            } else if (item.shopId === 'matsukiyo') {
+                                pointCardSelect.value = 'dpoint_05';
+                            }
+                        }
+
+                        shopSuggestions.classList.add('hidden');
+                        gpsShopsContainer.classList.add('hidden');
+                    });
+
+                    gpsShopList.appendChild(shopItem);
+                });
+            }
+        }
     }
 
     function calculatePoints(card, amount, shop, pointCardVal = 'none') {
@@ -1299,19 +1595,19 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (ptType === 'rakuten') presentName = '楽天ポイント';
         }
         
-        let anaMiles = totalPoints * c.anaRate + presentMiles;
-        let jalMiles = totalPoints * c.jalRate + presentMiles;
+        let anaMiles = Math.round((totalPoints * c.anaRate + presentMiles) * 10000) / 10000;
+        let jalMiles = Math.round((totalPoints * c.jalRate + presentMiles) * 10000) / 10000;
         let bestMiles = Math.max(anaMiles, jalMiles);
         
         const effectiveRate = amount > 0 ? (bestMiles / amount) * 100 : 0;
         
         return { 
             ...c, 
-            totalPoints: totalPoints, 
+            totalPoints: Math.round(totalPoints * 10000) / 10000, 
             anaMiles: anaMiles, 
             jalMiles: jalMiles, 
             totalValue: bestMiles,
-            effectiveRate: effectiveRate,
+            effectiveRate: Math.round(effectiveRate * 10000) / 10000,
             presentPoints: presentPoints,
             presentName: presentName
         };
@@ -1350,6 +1646,97 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const bestOwnedValue = ownedResults[0].totalValue;
         
+        // 1番お得な支払い方法ショートカットバナーの表示・設定
+        const bestBanner = document.getElementById('best-payment-shortcut-banner');
+        const bestNameEl = document.getElementById('best-payment-name');
+        const bestRateEl = document.getElementById('best-payment-rate');
+        const bestAppBtn = document.getElementById('best-payment-app-btn');
+        const bestRecordBtn = document.getElementById('best-payment-record-btn');
+
+        if (bestBanner && bestNameEl && bestRateEl && bestAppBtn && bestRecordBtn) {
+            const bestResult = ownedResults[0];
+            const displayRate = bestResult.effectiveRate.toFixed(2);
+            const maxMiles = Math.max(bestResult.anaMiles, bestResult.jalMiles);
+            const milesDisplay = Number.isInteger(maxMiles) ? maxMiles : maxMiles.toFixed(1);
+            
+            bestNameEl.textContent = bestResult.name;
+            bestRateEl.innerHTML = `還元率: <span style="font-size:1.1rem; color:#0ea5e9; font-weight:800;">${displayRate}%</span> (約 ${milesDisplay} マイル獲得可能)`;
+            
+            // 決済アプリ名とURLスキームの判定
+            let appName = '決済アプリ';
+            let schemeUrl = '';
+            const ua = navigator.userAgent.toLowerCase();
+            const isIOS = /iphone|ipad|ipod/.test(ua);
+            const isAndroid = /android/.test(ua);
+
+            const isWalletTarget = [
+                'smcc_nl', 'smcc_gold_nl', 'smcc_platinum_pref', 
+                'olive_normal', 'olive_gold', 'olive_platinum',
+                'jcb_w', 'jcb_general', 'ana_card', 'ana_visa_gold', 'ana_student',
+                'view_suica'
+            ].includes(bestResult.id) || bestResult.name.includes('タッチ決済') || bestResult.name.includes('iD') || bestResult.name.includes('QUICPay');
+
+            if (isWalletTarget) {
+                appName = isIOS ? 'Apple Wallet' : (isAndroid ? 'Google Wallet' : 'ウォレット');
+                schemeUrl = isIOS ? 'shoebox://' : (isAndroid ? 'intent://#Intent;scheme=org.chromium.chrome;package=com.google.android.apps.wallet;end' : 'https://www.apple.com/jp/apple-pay/');
+            } else if (bestResult.id.includes('rakuten') || bestResult.name.includes('楽天')) {
+                appName = '楽天ペイ';
+                schemeUrl = 'rakutenpay://';
+            } else if (bestResult.id.includes('paypay') || bestResult.name.includes('PayPay') || bestResult.name.includes('ペイペイ')) {
+                appName = 'PayPay';
+                schemeUrl = 'paypay://';
+            } else if (bestResult.id.includes('dcard') || bestResult.name.includes('d払い') || bestResult.name.includes('dカード')) {
+                appName = 'd払い';
+                schemeUrl = 'dpayment://';
+            } else if (bestResult.id.includes('aupay') || bestResult.name.includes('au PAY')) {
+                appName = 'au PAY';
+                schemeUrl = 'aupay://';
+            } else if (bestResult.id.includes('suica') || bestResult.name.includes('Suica')) {
+                appName = 'モバイルSuica';
+                schemeUrl = 'suicapassport://';
+            } else if (bestResult.id.includes('kyash') || bestResult.name.includes('Kyash')) {
+                appName = 'Kyash';
+                schemeUrl = 'kyash://';
+            } else if (bestResult.id.includes('linepay') || bestResult.name.includes('LINE Pay')) {
+                appName = 'LINE Pay';
+                schemeUrl = 'linepay://';
+            } else {
+                appName = isIOS ? 'Apple Wallet' : (isAndroid ? 'Google Wallet' : 'ウォレット');
+                schemeUrl = isIOS ? 'shoebox://' : (isAndroid ? 'intent://#Intent;scheme=org.chromium.chrome;package=com.google.android.apps.wallet;end' : '');
+            }
+
+            bestAppBtn.innerHTML = `<span>📱</span> ${appName}を開いて支払う`;
+
+            // アプリ起動ボタンのリスナー設定
+            const newAppBtn = bestAppBtn.cloneNode(true);
+            bestAppBtn.parentNode.replaceChild(newAppBtn, bestAppBtn);
+            newAppBtn.addEventListener('click', () => {
+                if (schemeUrl) {
+                    window.location.href = schemeUrl;
+                } else {
+                    alert('お使いの環境では直接起動できる決済アプリが見つかりません。スマートフォンの各決済アプリを起動してください。');
+                }
+            });
+            
+            // お小遣い帳記録ボタンのリスナー設定
+            const newRecordBtn = bestRecordBtn.cloneNode(true);
+            bestRecordBtn.parentNode.replaceChild(newRecordBtn, bestRecordBtn);
+            newRecordBtn.addEventListener('click', () => {
+                const paramsObj = {
+                    shopName: shop.name,
+                    amount,
+                    cardName: bestResult.name,
+                    points: bestResult.totalPoints,
+                    unitName: bestResult.unitName,
+                    presentPoints: bestResult.presentPoints,
+                    presentName: bestResult.presentName
+                };
+                window.openMemoModal(encodeURIComponent(JSON.stringify(paramsObj)));
+            });
+            
+            bestBanner.classList.remove('hidden');
+        }
+
         ownedResults.forEach((result, index) => {
             ownedRanking.insertAdjacentHTML('beforeend', createRankItemHtml(result, index + 1, shop.name, amount, true));
         });
